@@ -9,6 +9,7 @@ import { MCQModal } from "./MCQModal";
 import { RegulatorCardModal } from "./RegulatorCardModal";
 import { EndScreen } from "./EndScreen";
 import { useSoloGame } from "@/lib/game/use-solo-game";
+import type { Player } from "@/lib/game/engine-types";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { AVATARS } from "@/lib/game/constants";
@@ -82,7 +83,7 @@ export function GameSession({ roomId }: Props) {
               rolling={state.phase === "rolling"}
               lastRoll={state.lastRoll}
               onRoll={game.rollDice}
-              currentName={state.players.find((p) => p.id === state.currentPlayerId)?.name ?? ""}
+              currentName={state.players.find((p: Player) => p.id === state.currentPlayerId)?.name ?? ""}
               isHumanTurn={state.currentPlayerId === human.id}
             />
             {state.message && (
@@ -92,7 +93,7 @@ export function GameSession({ roomId }: Props) {
         </section>
 
         <aside className="space-y-3">
-          {state.players.map((p) => (
+          {state.players.map((p: Player) => (
             <PlayerPanel
               key={p.id}
               player={p}
