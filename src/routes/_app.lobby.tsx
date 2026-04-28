@@ -52,7 +52,7 @@ function LobbyPage() {
     const code = generateRoomCode();
     const { data: room, error } = await supabase
       .from("rooms")
-      .insert({ code, host_id: user.id, status: "waiting", max_players: MAX_PLAYERS })
+      .insert({ code, host_id: user.id, status: "waiting" })
       .select()
       .single();
     if (error || !room) {
@@ -62,10 +62,10 @@ function LobbyPage() {
     }
     await supabase.from("room_players").insert({
       room_id: room.id,
-      user_id: user.id,
+      player_id: user.id,
       display_name: displayName,
       avatar_id: avatarId,
-      seat: 0,
+      seat_order: 0,
     });
     setCreating(false);
     navigate({ to: "/game/$roomId", params: { roomId: room.id } });
@@ -84,17 +84,17 @@ function LobbyPage() {
     }
     const { data: existing } = await supabase
       .from("room_players")
-      .select("seat")
+      .select("seat_order")
       .eq("room_id", room.id);
     const seat = existing?.length ?? 0;
-    if (seat >= room.max_players) {
+    if (seat >= MAX_PLAYERS) {
       toast.error("Room is full");
       setJoining(false);
       return;
     }
     await supabase.from("room_players").upsert(
-      { room_id: room.id, user_id: user.id, display_name: displayName, avatar_id: avatarId, seat },
-      { onConflict: "room_id,user_id" },
+      { room_id: room.id, player_id: user.id, display_name: displayName, avatar_id: avatarId, seat_order: seat },
+      { onConflict: "room_id,player_id" },
     );
     setJoining(false);
     navigate({ to: "/game/$roomId", params: { roomId: room.id } });
