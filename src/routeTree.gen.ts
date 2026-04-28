@@ -14,6 +14,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppLobbyRouteImport } from './routes/_app.lobby'
+import { Route as AppGameRoomIdRouteImport } from './routes/_app.game.$roomId'
 
 const HowItWorksRoute = HowItWorksRouteImport.update({
   id: '/how-it-works',
@@ -39,18 +40,25 @@ const AppLobbyRoute = AppLobbyRouteImport.update({
   path: '/lobby',
   getParentRoute: () => AppRoute,
 } as any)
+const AppGameRoomIdRoute = AppGameRoomIdRouteImport.update({
+  id: '/game/$roomId',
+  path: '/game/$roomId',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/how-it-works': typeof HowItWorksRoute
   '/lobby': typeof AppLobbyRoute
+  '/game/$roomId': typeof AppGameRoomIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/how-it-works': typeof HowItWorksRoute
   '/lobby': typeof AppLobbyRoute
+  '/game/$roomId': typeof AppGameRoomIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -59,13 +67,21 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/how-it-works': typeof HowItWorksRoute
   '/_app/lobby': typeof AppLobbyRoute
+  '/_app/game/$roomId': typeof AppGameRoomIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/how-it-works' | '/lobby'
+  fullPaths: '/' | '/auth' | '/how-it-works' | '/lobby' | '/game/$roomId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/how-it-works' | '/lobby'
-  id: '__root__' | '/' | '/_app' | '/auth' | '/how-it-works' | '/_app/lobby'
+  to: '/' | '/auth' | '/how-it-works' | '/lobby' | '/game/$roomId'
+  id:
+    | '__root__'
+    | '/'
+    | '/_app'
+    | '/auth'
+    | '/how-it-works'
+    | '/_app/lobby'
+    | '/_app/game/$roomId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -112,15 +128,24 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppLobbyRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/game/$roomId': {
+      id: '/_app/game/$roomId'
+      path: '/game/$roomId'
+      fullPath: '/game/$roomId'
+      preLoaderRoute: typeof AppGameRoomIdRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
   AppLobbyRoute: typeof AppLobbyRoute
+  AppGameRoomIdRoute: typeof AppGameRoomIdRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppLobbyRoute: AppLobbyRoute,
+  AppGameRoomIdRoute: AppGameRoomIdRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
@@ -134,3 +159,12 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
