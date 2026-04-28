@@ -14,8 +14,11 @@ export const Route = createFileRoute("/lobby")({
 });
 
 function LobbyPage() {
-  const { user, signOut } = useAuth();
+  const { user, signOut, loading } = useAuth();
   const navigate = useNavigate();
+  useEffect(() => {
+    if (!loading && !user) navigate({ to: "/auth", search: { mode: "signin" } });
+  }, [user, loading, navigate]);
   const [displayName, setDisplayName] = useState("");
   const [avatarId, setAvatarId] = useState<number>(0);
   const [joinCode, setJoinCode] = useState("");
