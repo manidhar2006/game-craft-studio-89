@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { AVATARS, generateRoomCode, MAX_PLAYERS } from "@/lib/game/constants";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_app/lobby")({
+export const Route = createFileRoute("/lobby")({
   component: LobbyPage,
 });
 
