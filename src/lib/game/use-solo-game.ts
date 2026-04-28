@@ -15,6 +15,12 @@ interface Opts {
   enabled: boolean;
   humanName: string;
   humanAvatar: number;
+  opponents?: Array<{ id: string; name: string; avatarId: number }>;
+  localPlayerId?: string;
+  autoPlayBots?: boolean;
+  initialState?: GameState | null;
+  externalState?: GameState | null;
+  onStateChange?: (nextState: GameState) => void;
 }
 
 const COMPUTERS = [
@@ -34,6 +40,52 @@ function makePlayer(id: string, name: string, avatarId: number, isHuman: boolean
     jailTurnsRemaining: 0,
     isEliminated: false,
     layers: {},
+  };
+}
+
+function buildPlayers(
+  localPlayerId: string,
+  humanName: string,
+  humanAvatar: number,
+  opponents?: Array<{ id: string; name: string; avatarId: number }>,
+) {
+  const roomOpponents = (opponents ?? []).filter((o) => o.id !== localPlayerId);
+  const players: Player[] = [makePlayer(localPlayerId, humanName || "You", humanAvatar, true)];
+
+  if (roomOpponents.length > 0) {
+    for (const o of roomOpponents) {
+      players.push(makePlayer(o.id, o.name, o.avatarId, false));
+    }
+  } else {
+    players.push(makePlayer("cpu1", COMPUTERS[0].name, COMPUTERS[0].avatarId, false));
+    players.push(makePlayer("cpu2", COMPUTERS[1].name, COMPUTERS[1].avatarId, false));
+  }
+
+  return players;
+}
+
+export function buildInitialGameState(
+  localPlayerId: string,
+  humanName: string,
+  humanAvatar: number,
+  opponents?: Array<{ id: string; name: string; avatarId: number }>,
+): GameState {
+  const players = buildPlayers(localPlayerId, humanName, humanAvatar, opponents);
+  const localPlayer = players.find((p) => p.id === localPlayerId);
+  return {
+    board: BOARD_TILES,
+    players,
+    currentPlayerId: players[0]?.id ?? localPlayerId,
+    propertyOwners: {},
+    phase: "idle",
+    lastRoll: null,
+    message: localPlayer ? "Your turn — roll the dice to begin." : `${players[0]?.name ?? "Player"} starts first.`,
+    activeMcq: null,
+    activeCard: null,
+    winner: null,
+    pendingBuy: null,
+    pendingRent: null,
+    pendingOwn: null,
   };
 }
 
@@ -63,32 +115,53 @@ function mapQuestion(q: { id: string; question_text: string; option_a: string; o
   };
 }
 
-export function useSoloGame({ enabled, humanName, humanAvatar }: Opts) {
+function degradePropertyOneTier(state: GameState, principleNo: number, ownerId: string) {
+  const owner = state.players.find((p) => p.id === ownerId);
+  if (!owner) return { players: state.players, propertyOwners: state.propertyOwners, removedOwnership: false };
+
+  const currentLayers = owner.layers[principleNo] ?? 0;
+  if (currentLayers > 0) {
+    const players = state.players.map((p) => {
+      if (p.id !== ownerId) return p;
+      return {
+        ...p,
+        layers: { ...p.layers, [principleNo]: currentLayers - 1 },
+      };
+    });
+    return { players, propertyOwners: state.propertyOwners, removedOwnership: false };
+  }
+
+  const propertyOwners = { ...state.propertyOwners };
+  delete propertyOwners[principleNo];
+  const players = state.players.map((p) => {
+    if (p.id !== ownerId) return p;
+    const nextLayers = { ...p.layers };
+    delete nextLayers[principleNo];
+    return { ...p, layers: nextLayers };
+  });
+  return { players, propertyOwners, removedOwnership: true };
+}
+
+export function useSoloGame({
+  enabled,
+  humanName,
+  humanAvatar,
+  opponents,
+  localPlayerId = "human",
+  autoPlayBots = true,
+  initialState,
+  externalState,
+  onStateChange,
+}: Opts) {
   const [state, setState] = useState<GameState | null>(null);
   const initRef = useRef(false);
   const stateRef = useRef<GameState | null>(null);
+  const applyingExternalRef = useRef(false);
   useEffect(() => { stateRef.current = state; }, [state]);
 
   const init = useCallback(() => {
-    const players: Player[] = [
-      makePlayer("human", humanName || "You", humanAvatar, true),
-      makePlayer("cpu1", COMPUTERS[0].name, COMPUTERS[0].avatarId, false),
-      makePlayer("cpu2", COMPUTERS[1].name, COMPUTERS[1].avatarId, false),
-    ];
-    setState({
-      board: BOARD_TILES,
-      players,
-      currentPlayerId: "human",
-      propertyOwners: {},
-      phase: "idle",
-      lastRoll: null,
-      message: "Your turn — roll the dice to begin.",
-      activeMcq: null,
-      activeCard: null,
-      winner: null,
-      pendingBuy: null,
-    });
-  }, [humanName, humanAvatar]);
+    setState(initialState ?? buildInitialGameState(localPlayerId, humanName, humanAvatar, opponents));
+  }, [humanName, humanAvatar, initialState, localPlayerId, opponents]);
 
   useEffect(() => {
     if (enabled && !initRef.current) {
@@ -96,6 +169,21 @@ export function useSoloGame({ enabled, humanName, humanAvatar }: Opts) {
       init();
     }
   }, [enabled, init]);
+
+  useEffect(() => {
+    if (!enabled || !externalState) return;
+    applyingExternalRef.current = true;
+    setState(externalState);
+  }, [enabled, externalState]);
+
+  useEffect(() => {
+    if (!state || !onStateChange) return;
+    if (applyingExternalRef.current) {
+      applyingExternalRef.current = false;
+      return;
+    }
+    onStateChange(state);
+  }, [onStateChange, state]);
 
   const reset = useCallback(() => {
     initRef.current = false;
@@ -134,21 +222,24 @@ export function useSoloGame({ enabled, humanName, humanAvatar }: Opts) {
         currentPlayerId: nextPlayer.id,
         phase: "idle",
         lastRoll: null,
-        message: nextPlayer.isHuman ? "Your turn — roll the dice." : `${nextPlayer.name} is thinking…`,
+        message: nextPlayer.id === localPlayerId ? "Your turn — roll the dice." : `${nextPlayer.name}'s turn.`,
         activeMcq: null,
         activeCard: null,
         pendingBuy: null,
+        pendingRent: null,
+        pendingOwn: null,
       };
     });
-  }, []);
+  }, [localPlayerId]);
 
   const settleLanding = useCallback(async (player: Player) => {
+    const isLocalTurn = player.id === localPlayerId;
     const tile = BOARD_TILES[player.position];
     if (tile.type === "principle" && tile.principleNo) {
       const principle = principleAt(player.position)!;
       const ownerId = stateRef.current?.propertyOwners[principle.principleNo];
       if (!ownerId) {
-        if (player.isHuman) {
+        if (isLocalTurn) {
           const q = await fetchQuestion(principle.principleNo);
           if (q) {
             setState((s) => s ? ({
@@ -156,6 +247,8 @@ export function useSoloGame({ enabled, humanName, humanAvatar }: Opts) {
               phase: "mcq",
               activeMcq: { question: q, principleNo: principle.principleNo, principleName: principle.name, mode: "buy" },
               pendingBuy: { principle },
+              pendingRent: null,
+              pendingOwn: null,
               message: `Answer correctly to acquire ${principle.name} for ₹${principle.price}.`,
             }) : s);
             return;
@@ -176,31 +269,69 @@ export function useSoloGame({ enabled, humanName, humanAvatar }: Opts) {
         return;
       }
       if (ownerId === player.id) {
-        setState((s) => {
-          if (!s) return s;
-          const me = s.players.find((p) => p.id === player.id)!;
-          const layers = me.layers[principle.principleNo] ?? 0;
-          if (layers < 3 && me.credits >= principle.layerCost) {
-            const players = s.players.map((p) => p.id === me.id ? {
-              ...p,
-              credits: p.credits - principle.layerCost,
-              layers: { ...p.layers, [principle.principleNo]: layers + 1 },
-            } : p);
-            return { ...s, players, message: `${me.name} added a compliance layer to ${principle.name}.` };
+        if (isLocalTurn) {
+          const q = await fetchQuestion(principle.principleNo);
+          if (q) {
+            setState((s) => s ? ({
+              ...s,
+              phase: "mcq",
+              activeMcq: { question: q, principleNo: principle.principleNo, principleName: principle.name, mode: "audit" },
+              pendingOwn: { principle },
+              pendingBuy: null,
+              pendingRent: null,
+              message: `Answer correctly to maintain strength on ${principle.name}.`,
+            }) : s);
+            return;
           }
-          return { ...s, message: `${me.name} revisits ${principle.name}.` };
-        });
-        setTimeout(advanceTurn, 900);
+        } else {
+          // CPU behavior: attempt to build when affordable.
+          setState((s) => {
+            if (!s) return s;
+            const me = s.players.find((p) => p.id === player.id)!;
+            const layers = me.layers[principle.principleNo] ?? 0;
+            if (layers < 3 && me.credits >= principle.layerCost) {
+              const players = s.players.map((p) => p.id === me.id ? {
+                ...p,
+                credits: p.credits - principle.layerCost,
+                layers: { ...p.layers, [principle.principleNo]: layers + 1 },
+              } : p);
+              return { ...s, players, message: `${me.name} strengthened ${principle.name}.` };
+            }
+            return { ...s, message: `${me.name} revisits ${principle.name}.` };
+          });
+          setTimeout(advanceTurn, 900);
+        }
         return;
       }
+      if (isLocalTurn) {
+        const q = await fetchQuestion(principle.principleNo);
+        if (q) {
+          setState((s) => s ? ({
+            ...s,
+            phase: "mcq",
+            activeMcq: { question: q, principleNo: principle.principleNo, principleName: principle.name, mode: "rent_dispute" },
+            pendingRent: { principle, ownerId },
+            pendingBuy: null,
+            pendingOwn: null,
+            message: `Answer correctly to pass audit and avoid rent on ${principle.name}.`,
+          }) : s);
+          return;
+        }
+      }
+
+      // CPU fallback on opponent tile.
+      const cpuCorrect = Math.random() < 0.55;
       setState((s) => {
         if (!s) return s;
+        if (cpuCorrect) {
+          return { ...s, message: `${player.name} passed audit on ${principle.name} and paid no rent.` };
+        }
         const owner = s.players.find((p) => p.id === ownerId)!;
         const layers = owner.layers[principle.principleNo] ?? 0;
         const rent = rentFor(principle, layers);
         const me = s.players.find((p) => p.id === player.id)!;
         const pay = Math.min(rent, me.credits);
-        const players = s.players.map((p) => {
+        let players = s.players.map((p) => {
           if (p.id === me.id) {
             const credits = p.credits - pay;
             return { ...p, credits, isEliminated: credits <= 0 ? true : p.isEliminated };
@@ -208,9 +339,15 @@ export function useSoloGame({ enabled, humanName, humanAvatar }: Opts) {
           if (p.id === owner.id) return { ...p, credits: p.credits + pay };
           return p;
         });
-        return { ...s, players, message: `${me.name} paid ₹${pay} rent on ${principle.name} to ${owner.name}.` };
+        const degraded = degradePropertyOneTier({ ...s, players }, principle.principleNo, ownerId);
+        players = degraded.players;
+        const propertyOwners = degraded.propertyOwners;
+        const message = degraded.removedOwnership
+          ? `${player.name} failed audit, paid ₹${pay}, and ${principle.name} became unowned.`
+          : `${player.name} failed audit, paid ₹${pay}; ${principle.name} weakened by one rent tier.`;
+        return { ...s, players, propertyOwners, message };
       });
-      setTimeout(advanceTurn, 1200);
+      setTimeout(advanceTurn, 1300);
       return;
     }
     if (tile.type === "tax" && tile.amount) {
@@ -268,11 +405,13 @@ export function useSoloGame({ enabled, humanName, humanAvatar }: Opts) {
   }, [settleLanding]);
 
   const rollDice = useCallback(() => {
+    const current = stateRef.current;
+    if (!current || current.currentPlayerId !== localPlayerId || current.phase !== "idle") return;
     setState((s) => s ? ({ ...s, phase: "rolling" }) : s);
     setTimeout(() => {
       const a = 1 + Math.floor(Math.random() * 6);
       const b = 1 + Math.floor(Math.random() * 6);
-      let curId = stateRef.current?.currentPlayerId ?? "human";
+      let curId = stateRef.current?.currentPlayerId ?? localPlayerId;
       let inJail = false;
       setState((s) => {
         if (!s) return s;
@@ -292,9 +431,11 @@ export function useSoloGame({ enabled, humanName, humanAvatar }: Opts) {
       }
       setTimeout(() => movePlayer(curId, a + b), 700);
     }, 700);
-  }, [advanceTurn, movePlayer]);
+  }, [advanceTurn, localPlayerId, movePlayer]);
 
   const answerMcq = useCallback((picked: "A" | "B" | "C" | "D") => {
+    const current = stateRef.current;
+    if (!current || current.currentPlayerId !== localPlayerId || current.phase !== "mcq") return;
     setState((s) => {
       if (!s || !s.activeMcq) return s;
       const correct = picked === s.activeMcq.question.correct;
@@ -313,13 +454,63 @@ export function useSoloGame({ enabled, humanName, humanAvatar }: Opts) {
         } else {
           message = `Incorrect. The principle remains unowned. Right answer: ${s.activeMcq.question.correct}.`;
         }
+      } else if (s.pendingRent) {
+        const principle = s.pendingRent.principle;
+        const owner = s.players.find((p) => p.id === s.pendingRent!.ownerId)!;
+        const me = s.players.find((p) => p.id === s.currentPlayerId)!;
+        if (correct) {
+          message = `Correct! ${me.name} passed audit and paid no rent on ${principle.name}.`;
+        } else {
+          const layers = owner.layers[principle.principleNo] ?? 0;
+          const rent = rentFor(principle, layers);
+          const pay = Math.min(rent, me.credits);
+          players = players.map((p) => {
+            if (p.id === me.id) {
+              const credits = p.credits - pay;
+              return { ...p, credits, isEliminated: credits <= 0 ? true : p.isEliminated };
+            }
+            if (p.id === owner.id) return { ...p, credits: p.credits + pay };
+            return p;
+          });
+          const degraded = degradePropertyOneTier({ ...s, players, propertyOwners }, principle.principleNo, owner.id);
+          players = degraded.players;
+          propertyOwners = degraded.propertyOwners;
+          message = degraded.removedOwnership
+            ? `Wrong answer. Paid ₹${pay}; ${principle.name} rent dropped to zero and ownership was removed.`
+            : `Wrong answer. Paid ₹${pay}; ${principle.name} rent tier dropped.`;
+        }
+      } else if (s.pendingOwn) {
+        const principle = s.pendingOwn.principle;
+        const me = s.players.find((p) => p.id === s.currentPlayerId)!;
+        if (correct) {
+          message = `Correct! ${principle.name} remains stable.`;
+        } else {
+          const degraded = degradePropertyOneTier({ ...s, players, propertyOwners }, principle.principleNo, me.id);
+          players = degraded.players;
+          propertyOwners = degraded.propertyOwners;
+          message = degraded.removedOwnership
+            ? `Wrong answer. ${principle.name} was downgraded to zero rent and became unowned.`
+            : `Wrong answer. ${principle.name} dropped by one rent tier.`;
+        }
       }
-      return { ...s, players, propertyOwners, phase: "turn_end", activeMcq: null, pendingBuy: null, message };
+      return {
+        ...s,
+        players,
+        propertyOwners,
+        phase: "turn_end",
+        activeMcq: null,
+        pendingBuy: null,
+        pendingRent: null,
+        pendingOwn: null,
+        message,
+      };
     });
     setTimeout(advanceTurn, 1500);
-  }, [advanceTurn]);
+  }, [advanceTurn, localPlayerId]);
 
   const acknowledgeCard = useCallback(() => {
+    const current = stateRef.current;
+    if (!current || current.currentPlayerId !== localPlayerId || current.phase !== "regulator") return;
     setState((s) => {
       if (!s || !s.activeCard) return s;
       const card = s.activeCard;
@@ -337,24 +528,24 @@ export function useSoloGame({ enabled, humanName, humanAvatar }: Opts) {
       return { ...s, players, activeCard: null, phase: "turn_end" };
     });
     setTimeout(advanceTurn, 800);
-  }, [advanceTurn]);
+  }, [advanceTurn, localPlayerId]);
 
   // CPU autoplay
   useEffect(() => {
     if (!state) return;
+    if (!autoPlayBots) return;
     const cur = state.players.find((p) => p.id === state.currentPlayerId);
-    if (!cur || cur.isHuman) return;
+    if (!cur || cur.id === localPlayerId) return;
     if (state.phase !== "idle") return;
     const t = setTimeout(() => rollDice(), 1200);
     return () => clearTimeout(t);
-  }, [state, rollDice]);
+  }, [autoPlayBots, localPlayerId, rollDice, state]);
 
   const canRoll = useMemo(() => {
     if (!state) return false;
     if (state.phase !== "idle") return false;
-    const cur = state.players.find((p) => p.id === state.currentPlayerId);
-    return !!cur?.isHuman;
-  }, [state]);
+    return state.currentPlayerId === localPlayerId;
+  }, [localPlayerId, state]);
 
   return { state, rollDice, answerMcq, acknowledgeCard, reset, canRoll };
 }

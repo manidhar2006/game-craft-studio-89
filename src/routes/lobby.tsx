@@ -9,6 +9,14 @@ import { Input } from "@/components/ui/input";
 import { AVATARS, generateRoomCode, MAX_PLAYERS } from "@/lib/game/constants";
 import { toast } from "sonner";
 
+function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isSchemaCacheError(error: unknown) {
+  return typeof error === "object" && error !== null && "code" in error && (error as { code?: string }).code === "PGRST002";
+}
+
 export const Route = createFileRoute("/lobby")({
   component: LobbyPage,
 });
@@ -24,6 +32,9 @@ function LobbyPage() {
   const [joinCode, setJoinCode] = useState("");
   const [creating, setCreating] = useState(false);
   const [joining, setJoining] = useState(false);
+  const [pendingAction, setPendingAction] = useState<null | "solo">(null);
+  const [showCreateRoomModal, setShowCreateRoomModal] = useState(false);
+  const [selectedPlayerCount, setSelectedPlayerCount] = useState<2 | 3 | 4>(4);
 
   useEffect(() => {
     if (!user) return;
@@ -44,63 +55,141 @@ function LobbyPage() {
   }
 
   async function startSolo() {
-    await saveProfile();
-    navigate({ to: "/game/$roomId", params: { roomId: "solo" } });
+    // open avatar selection first
+    setPendingAction("solo");
   }
 
-  async function createRoom() {
+  async function createRoom(maxPlayers: 2 | 3 | 4) {
     if (!user) return;
     setCreating(true);
-    await saveProfile();
-    const code = generateRoomCode();
-    const { data: room, error } = await supabase
-      .from("rooms")
-      .insert({ code, host_id: user.id, status: "waiting" })
-      .select()
-      .single();
-    if (error || !room) {
-      toast.error("Could not create room");
+    try {
+      const code = generateRoomCode();
+      let room: { id: string } | null = null;
+      let error: unknown = null;
+
+      // PostgREST may briefly return PGRST002 while rebuilding schema cache.
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        const result = await supabase
+          .from("rooms")
+          .insert({ code, host_id: user.id, status: "waiting", max_players: maxPlayers })
+          .select("id")
+          .single();
+        room = result.data as { id: string } | null;
+        error = result.error;
+        if (!error) break;
+        if (!isSchemaCacheError(error)) break;
+        await wait(1200 * (attempt + 1));
+      }
+
+      if (error || !room) {
+        console.error("Supabase create room error:", error);
+        toast.error("Could not create room. If this is the first request after DB changes, wait a few seconds and retry.");
+        setCreating(false);
+        return;
+      }
+
+      // add player without avatar; avatar selection happens inside the room
+      const { error: rpError } = await supabase.from("room_players").insert({
+        room_id: room.id,
+        player_id: user.id,
+        display_name: displayName,
+        avatar_id: null,
+        seat_order: 0,
+      });
+      if (rpError) {
+        console.error("Supabase room_players insert error:", rpError);
+        toast.error("Could not add player to room — check console for details.");
+        setCreating(false);
+        return;
+      }
+
       setCreating(false);
-      return;
+      setShowCreateRoomModal(false);
+      navigate({ to: "/game/$roomId", params: { roomId: room.id } });
+    } catch (e) {
+      console.error("Create room failed:", e);
+      toast.error("Network or service error while creating room.");
+      setCreating(false);
     }
-    await supabase.from("room_players").insert({
-      room_id: room.id,
-      player_id: user.id,
-      display_name: displayName,
-      avatar_id: avatarId,
-      seat_order: 0,
-    });
-    setCreating(false);
-    navigate({ to: "/game/$roomId", params: { roomId: room.id } });
   }
 
   async function joinRoom() {
     if (!user || !joinCode.trim()) return;
     setJoining(true);
-    await saveProfile();
     const code = joinCode.trim().toUpperCase();
-    const { data: room } = await supabase.from("rooms").select("*").eq("code", code).maybeSingle();
+    const { data: room, error: roomError } = await supabase
+      .from("rooms")
+      .select("id, max_players, status")
+      .eq("code", code)
+      .maybeSingle();
+    if (roomError) {
+      console.error("Supabase room lookup error:", roomError);
+      toast.error("Could not find that room. Please try again.");
+      setJoining(false);
+      return;
+    }
     if (!room) {
       toast.error("Room not found");
       setJoining(false);
       return;
     }
-    const { data: existing } = await supabase
+    if (room.status !== "waiting") {
+      toast.error("That room has already started.");
+      setJoining(false);
+      return;
+    }
+
+    const { error: joinError } = await supabase.from("room_players").upsert(
+      { room_id: room.id, player_id: user.id, display_name: displayName, avatar_id: null, seat_order: 999 },
+      { onConflict: "room_id,player_id" },
+    );
+    if (joinError) {
+      console.error("Supabase room_players upsert error:", joinError);
+      toast.error("Could not join the room. Please try again.");
+      setJoining(false);
+      return;
+    }
+
+    const { data: players, error: playersError } = await supabase
       .from("room_players")
-      .select("seat_order")
+      .select("player_id, seat_order")
       .eq("room_id", room.id);
-    const seat = existing?.length ?? 0;
-    if (seat >= MAX_PLAYERS) {
+    if (playersError) {
+      console.error("Supabase room_players lookup error:", playersError);
+    }
+
+    const maxPlayers = room.max_players ?? MAX_PLAYERS;
+    if ((players?.length ?? 0) > maxPlayers) {
+      await supabase.from("room_players").delete().eq("room_id", room.id).eq("player_id", user.id);
       toast.error("Room is full");
       setJoining(false);
       return;
     }
-    await supabase.from("room_players").upsert(
-      { room_id: room.id, player_id: user.id, display_name: displayName, avatar_id: avatarId, seat_order: seat },
-      { onConflict: "room_id,player_id" },
-    );
+
+    if (players) {
+      const usedSeats = new Set(players.filter((p) => p.player_id !== user.id).map((p) => p.seat_order));
+      let nextSeat = 0;
+      while (usedSeats.has(nextSeat)) nextSeat += 1;
+      await supabase
+        .from("room_players")
+        .update({ seat_order: nextSeat })
+        .eq("room_id", room.id)
+        .eq("player_id", user.id);
+    }
     setJoining(false);
     navigate({ to: "/game/$roomId", params: { roomId: room.id } });
+  }
+
+  // actions executed after avatar is confirmed (solo only)
+  async function confirmPendingAction() {
+    if (!pendingAction || !user) return;
+    await saveProfile();
+
+    if (pendingAction === "solo") {
+      navigate({ to: "/game/$roomId", params: { roomId: "solo" } });
+    }
+
+    setPendingAction(null);
   }
 
   return (
@@ -119,18 +208,15 @@ function LobbyPage() {
 
       <main className="mx-auto max-w-5xl px-6 py-10 md:py-14">
         <h1 className="text-3xl md:text-4xl font-semibold tracking-tight">Lobby</h1>
-        <p className="mt-2 text-muted-foreground">Pick your avatar, then play solo or start a room.</p>
+        <p className="mt-2 text-muted-foreground">Choose a mode to start</p>
 
-        <Card className="mt-8 p-6">
-          <h2 className="text-sm font-medium uppercase tracking-wider text-muted-foreground">Your profile</h2>
-          <div className="mt-4 grid gap-6 md:grid-cols-2">
-            <div>
-              <label className="text-sm font-medium">Display name</label>
-              <Input className="mt-2" value={displayName} onChange={(e) => setDisplayName(e.target.value)} maxLength={24} />
-            </div>
-            <div>
-              <label className="text-sm font-medium">Avatar</label>
-              <div className="mt-2 flex flex-wrap gap-2">
+        {/* Avatar confirmation modal shown after choosing a game mode */}
+        {pendingAction && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <Card className="w-full max-w-md p-6">
+              <h3 className="text-lg font-semibold">Confirm your avatar</h3>
+              <p className="mt-2 text-sm text-muted-foreground">Select an avatar and confirm to proceed.</p>
+              <div className="mt-4 flex flex-wrap gap-2">
                 {AVATARS.map((a) => (
                   <button
                     key={a.id}
@@ -146,9 +232,13 @@ function LobbyPage() {
                   </button>
                 ))}
               </div>
-            </div>
+              <div className="mt-6 flex justify-end gap-2">
+                <Button variant="ghost" onClick={() => setPendingAction(null)}>Cancel</Button>
+                <Button onClick={confirmPendingAction}>Confirm</Button>
+              </div>
+            </Card>
           </div>
-        </Card>
+        )}
 
         <div className="mt-8 grid gap-6 md:grid-cols-3">
           <Card className="p-6 flex flex-col">
@@ -162,7 +252,7 @@ function LobbyPage() {
             <Plus className="h-7 w-7 text-primary" />
             <h3 className="mt-4 text-lg font-semibold">Create Room</h3>
             <p className="mt-1 text-sm text-muted-foreground flex-1">Generate a code and invite up to 4 players.</p>
-            <Button className="mt-4" onClick={createRoom} disabled={creating || !displayName}>
+            <Button className="mt-4" onClick={() => setShowCreateRoomModal(true)} disabled={creating || !displayName}>
               {creating ? "Creating…" : "Create Room"}
             </Button>
           </Card>
@@ -181,6 +271,33 @@ function LobbyPage() {
             </Button>
           </Card>
         </div>
+
+        {showCreateRoomModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <Card className="w-full max-w-md p-6">
+              <h3 className="text-lg font-semibold">Create Multiplayer Room</h3>
+              <p className="mt-2 text-sm text-muted-foreground">Choose number of players (including you).</p>
+              <div className="mt-4 grid grid-cols-3 gap-2">
+                {[2, 3, 4].map((n) => (
+                  <Button
+                    key={n}
+                    type="button"
+                    variant={selectedPlayerCount === n ? "default" : "outline"}
+                    onClick={() => setSelectedPlayerCount(n as 2 | 3 | 4)}
+                  >
+                    {n} Players
+                  </Button>
+                ))}
+              </div>
+              <div className="mt-6 flex justify-end gap-2">
+                <Button variant="ghost" onClick={() => setShowCreateRoomModal(false)}>Cancel</Button>
+                <Button onClick={() => createRoom(selectedPlayerCount)} disabled={creating}>
+                  {creating ? "Creating…" : "Create"}
+                </Button>
+              </div>
+            </Card>
+          </div>
+        )}
 
         <div className="mt-10 flex items-center gap-4 text-sm text-muted-foreground">
           <Users className="h-4 w-4" />

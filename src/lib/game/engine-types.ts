@@ -60,4 +60,6 @@ export interface GameState {
   winner: Player | null;
   /** Pending action context after MCQ */
   pendingBuy?: { principle: PrincipleConfig } | null;
+  pendingRent?: { principle: PrincipleConfig; ownerId: string } | null;
+  pendingOwn?: { principle: PrincipleConfig } | null;
 }

@@ -245,8 +245,10 @@ export type Database = {
           code: string
           created_at: string
           current_turn_player_id: string | null
+          game_state: Json | null
           host_id: string
           id: string
+          max_players: number
           status: Database["public"]["Enums"]["room_status"]
           updated_at: string
         }
@@ -254,8 +256,10 @@ export type Database = {
           code: string
           created_at?: string
           current_turn_player_id?: string | null
+          game_state?: Json | null
           host_id: string
           id?: string
+          max_players?: number
           status?: Database["public"]["Enums"]["room_status"]
           updated_at?: string
         }
@@ -263,8 +267,10 @@ export type Database = {
           code?: string
           created_at?: string
           current_turn_player_id?: string | null
+          game_state?: Json | null
           host_id?: string
           id?: string
+          max_players?: number
           status?: Database["public"]["Enums"]["room_status"]
           updated_at?: string
         }

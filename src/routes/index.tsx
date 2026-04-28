@@ -22,9 +22,6 @@ function LandingPage() {
           <span className="font-display text-lg font-semibold tracking-tight">DPDPA Tycoon</span>
         </div>
         <nav className="flex items-center gap-2">
-          <Link to="/how-it-works">
-            <Button variant="ghost" size="sm" className="rounded-full">How it works</Button>
-          </Link>
           {!loading && (user ? (
             <>
               <Button size="sm" className="rounded-full" onClick={() => navigate({ to: "/lobby" })}>
@@ -58,7 +55,7 @@ function LandingPage() {
 
         <h1 className="font-display text-5xl font-semibold tracking-tight text-balance md:text-7xl">
           Master the{" "}
-          <span className="bg-gradient-hero bg-clip-text text-transparent">9 principles</span>
+          <span className="text-foreground">9 principles</span>
           <br />
           of DPDPA, one roll at a time.
         </h1>
