@@ -6,6 +6,6 @@ export const Route = createFileRoute("/game/$roomId")({
 });
 
 function GamePage() {
-  const { roomId } = useParams({ from: "/_app/game/$roomId" });
+  const { roomId } = useParams({ from: "/game/$roomId" });
   return <GameSession roomId={roomId} />;
 }
