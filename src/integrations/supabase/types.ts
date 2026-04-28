@@ -14,16 +14,274 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      game_events: {
+        Row: {
+          created_at: string
+          event_data: Json
+          event_type: string
+          id: string
+          message: string
+          player_id: string | null
+          room_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_data?: Json
+          event_type: string
+          id?: string
+          message: string
+          player_id?: string | null
+          room_id: string
+        }
+        Update: {
+          created_at?: string
+          event_data?: Json
+          event_type?: string
+          id?: string
+          message?: string
+          player_id?: string | null
+          room_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_events_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      principles: {
+        Row: {
+          base_rent: number
+          color_group: string
+          description: string | null
+          id: number
+          layer_1_rent: number
+          layer_2_rent: number
+          layer_3_rent: number
+          layer_cost: number
+          name: string
+          price: number
+          principle_no: number
+          tile_index: number
+        }
+        Insert: {
+          base_rent: number
+          color_group: string
+          description?: string | null
+          id: number
+          layer_1_rent: number
+          layer_2_rent: number
+          layer_3_rent: number
+          layer_cost: number
+          name: string
+          price: number
+          principle_no: number
+          tile_index: number
+        }
+        Update: {
+          base_rent?: number
+          color_group?: string
+          description?: string | null
+          id?: number
+          layer_1_rent?: number
+          layer_2_rent?: number
+          layer_3_rent?: number
+          layer_cost?: number
+          name?: string
+          price?: number
+          principle_no?: number
+          tile_index?: number
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_id: number | null
+          created_at: string
+          display_name: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          avatar_id?: number | null
+          created_at?: string
+          display_name: string
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          avatar_id?: number | null
+          created_at?: string
+          display_name?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      questions: {
+        Row: {
+          category: string
+          correct_answer: string
+          explanation: string | null
+          id: string
+          option_a: string
+          option_b: string
+          option_c: string
+          option_d: string
+          principle_no: number
+          question_text: string
+        }
+        Insert: {
+          category?: string
+          correct_answer: string
+          explanation?: string | null
+          id?: string
+          option_a: string
+          option_b: string
+          option_c: string
+          option_d: string
+          principle_no: number
+          question_text: string
+        }
+        Update: {
+          category?: string
+          correct_answer?: string
+          explanation?: string | null
+          id?: string
+          option_a?: string
+          option_b?: string
+          option_c?: string
+          option_d?: string
+          principle_no?: number
+          question_text?: string
+        }
+        Relationships: []
+      }
+      regulator_cards: {
+        Row: {
+          card_text: string
+          effect_data: Json
+          effect_type: string
+          id: string
+        }
+        Insert: {
+          card_text: string
+          effect_data?: Json
+          effect_type: string
+          id?: string
+        }
+        Update: {
+          card_text?: string
+          effect_data?: Json
+          effect_type?: string
+          id?: string
+        }
+        Relationships: []
+      }
+      room_players: {
+        Row: {
+          avatar_id: number | null
+          compliance_layers: Json
+          credits: number
+          display_name: string
+          id: string
+          in_jail: boolean
+          is_eliminated: boolean
+          jail_turns_remaining: number
+          joined_at: string
+          player_id: string
+          position: number
+          properties: Json
+          room_id: string
+          seat_order: number
+        }
+        Insert: {
+          avatar_id?: number | null
+          compliance_layers?: Json
+          credits?: number
+          display_name: string
+          id?: string
+          in_jail?: boolean
+          is_eliminated?: boolean
+          jail_turns_remaining?: number
+          joined_at?: string
+          player_id: string
+          position?: number
+          properties?: Json
+          room_id: string
+          seat_order?: number
+        }
+        Update: {
+          avatar_id?: number | null
+          compliance_layers?: Json
+          credits?: number
+          display_name?: string
+          id?: string
+          in_jail?: boolean
+          is_eliminated?: boolean
+          jail_turns_remaining?: number
+          joined_at?: string
+          player_id?: string
+          position?: number
+          properties?: Json
+          room_id?: string
+          seat_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_players_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rooms: {
+        Row: {
+          code: string
+          created_at: string
+          current_turn_player_id: string | null
+          host_id: string
+          id: string
+          status: Database["public"]["Enums"]["room_status"]
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          current_turn_player_id?: string | null
+          host_id: string
+          id?: string
+          status?: Database["public"]["Enums"]["room_status"]
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          current_turn_player_id?: string | null
+          host_id?: string
+          id?: string
+          status?: Database["public"]["Enums"]["room_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_room_member: {
+        Args: { _room_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      room_status: "waiting" | "in_progress" | "completed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +408,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      room_status: ["waiting", "in_progress", "completed"],
+    },
   },
 } as const
