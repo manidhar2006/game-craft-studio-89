@@ -2,58 +2,55 @@ import type { BoardTile } from "@/lib/game/constants";
 import { AVATARS, GROUP_COLORS, PRINCIPLES } from "@/lib/game/constants";
 import type { Player } from "@/lib/game/engine-types";
 import { Coins, Gavel, Scale, Sparkles, Star } from "lucide-react";
+import type { ReactNode } from "react";
 
 interface Props {
   tiles: BoardTile[];
   players: Player[];
   currentPlayerId: string;
   propertyOwners: Record<number, string>;
+  centerContent?: ReactNode;
 }
 
 /**
- * 20-tile rectangular board, 6 across × 6 down (corners + 4 per side).
- * We render a 6x6 grid where the inner cells form a calm felt-style center.
+ * 16-tile rectangular board, 5 across × 5 down (corners + 3 per side).
+ * We render a 5x5 grid where the inner cells form a calm felt-style center.
  */
-export function GameBoard({ tiles, players, currentPlayerId, propertyOwners }: Props) {
-  // Map tile index → grid position. 6x6 perimeter starting top-left, going clockwise.
+export function GameBoard({
+  tiles,
+  players,
+  currentPlayerId,
+  propertyOwners,
+  centerContent,
+}: Props) {
+  // Map tile index → grid position. 5x5 perimeter starting bottom-left, going anticlockwise.
   const positions: Record<number, { col: number; row: number }> = {};
-  // Top row: 0..5 (col 1..6 row 1)
-  for (let i = 0; i <= 5; i++) positions[i] = { col: i + 1, row: 1 };
-  // Right column: 6..9 (col 6, row 2..5)
-  for (let i = 6; i <= 9; i++) positions[i] = { col: 6, row: i - 4 };
-  // Bottom row: 10..15 (col 6..1, row 6)
-  for (let i = 10; i <= 15; i++) positions[i] = { col: 6 - (i - 10), row: 6 };
-  // Left column: 16..19 (col 1, row 5..2)
-  for (let i = 16; i <= 19; i++) positions[i] = { col: 1, row: 6 - (i - 15) };
+  // Left column bottom->top: indices 0..4 -> col 1, row 5..1
+  for (let i = 0; i <= 4; i++) positions[i] = { col: 1, row: 5 - i };
+  // Top row (excluding top-left): indices 5..8 -> col 2..5, row 1
+  for (let i = 5; i <= 8; i++) positions[i] = { col: i - 3, row: 1 };
+  // Right column top->bottom (excluding corners): indices 9..11 -> col 5, row 2..4
+  for (let i = 9; i <= 11; i++) positions[i] = { col: 5, row: i - 7 };
+  // Bottom row right->left (including bottom-right, excluding bottom-left): indices 12..15 -> col 5..2, row 5
+  for (let i = 12; i <= 15; i++) positions[i] = { col: 17 - i, row: 5 };
 
   return (
     <div className="relative aspect-square w-full max-w-[720px]">
-      <div className="grid h-full w-full grid-cols-6 grid-rows-6 gap-1.5 rounded-3xl bg-gradient-to-br from-secondary to-muted p-3 shadow-[0_30px_60px_-30px_rgba(40,60,55,0.35)] border border-border">
+      <div className="grid h-full w-full grid-cols-5 grid-rows-5 gap-1.5 rounded-3xl bg-gradient-to-br from-secondary to-muted p-3 shadow-[0_30px_60px_-30px_rgba(40,60,55,0.35)] border border-border">
         {/* Center plate */}
-        <div className="col-start-2 col-end-6 row-start-2 row-end-6 rounded-2xl bg-[oklch(0.96_0.012_120)] border border-border/60 flex flex-col items-center justify-center text-center px-6">
-          <div className="flex items-center gap-2 text-primary">
-            <Sparkles className="h-5 w-5" />
-            <span className="font-semibold tracking-tight">DPDPA Compliance Tycoon</span>
-          </div>
-          <p className="mt-2 text-xs text-muted-foreground max-w-xs">
-            Acquire principles, layer your compliance, answer MCQs, and outlast the regulators.
-          </p>
-          <div className="mt-4 flex flex-wrap justify-center gap-2 text-[10px] uppercase tracking-wider text-muted-foreground">
-            {(["saffron","white","green","navy"] as const).map((g) => (
-              <span key={g} className="flex items-center gap-1">
-                <span className="h-2.5 w-2.5 rounded-sm" style={{ background: GROUP_COLORS[g] }} />
-                {g}
-              </span>
-            ))}
-          </div>
+        <div className="col-start-2 col-end-5 row-start-2 row-end-5 rounded-2xl bg-[oklch(0.96_0.012_120)] border border-border/60 flex items-center justify-center p-4">
+          {centerContent}
         </div>
 
         {tiles.map((tile) => {
           const pos = positions[tile.index];
           const owner = tile.principleNo ? propertyOwners[tile.principleNo] : undefined;
           const ownerPlayer = owner ? players.find((p) => p.id === owner) : undefined;
-          const layers = ownerPlayer && tile.principleNo ? (ownerPlayer.layers[tile.principleNo] ?? 0) : 0;
-          const principle = tile.principleNo ? PRINCIPLES.find((p) => p.principleNo === tile.principleNo) : undefined;
+          const layers =
+            ownerPlayer && tile.principleNo ? (ownerPlayer.layers[tile.principleNo] ?? 0) : 0;
+          const principle = tile.principleNo
+            ? PRINCIPLES.find((p) => p.principleNo === tile.principleNo)
+            : undefined;
 
           return (
             <div
@@ -74,9 +71,15 @@ export function GameBoard({ tiles, players, currentPlayerId, propertyOwners }: P
                   {tile.type === "free_audit" && <Scale className="h-3 w-3 text-primary" />}
                   {tile.type === "start" && <Star className="h-3 w-3 text-accent" />}
                 </div>
-                {tile.subtitle && <span className="text-[9px] text-muted-foreground mt-0.5 line-clamp-2">{tile.subtitle}</span>}
+                {tile.subtitle && (
+                  <span className="text-[9px] text-muted-foreground mt-0.5 line-clamp-2">
+                    {tile.subtitle}
+                  </span>
+                )}
                 {principle && (
-                  <span className="mt-auto text-[9px] font-medium text-primary">₹{principle.price}</span>
+                  <span className="mt-auto text-[9px] font-medium text-primary">
+                    ₹{principle.price}
+                  </span>
                 )}
                 {layers > 0 && (
                   <div className="mt-0.5 flex gap-0.5">
@@ -93,17 +96,20 @@ export function GameBoard({ tiles, players, currentPlayerId, propertyOwners }: P
                   style={{ background: AVATARS[ownerPlayer.avatarId % AVATARS.length].color }}
                 />
               )}
-              {/* Player tokens stack */}
-              <div className="absolute left-1 top-1 flex -space-x-1">
+              {/* Player tokens centered and larger */}
+              <div className="absolute inset-0 flex items-center justify-center gap-1">
                 {players
                   .filter((p) => !p.isEliminated && p.position === tile.index)
                   .map((p) => (
                     <span
                       key={p.id}
-                      className={`flex h-4 w-4 items-center justify-center rounded-full text-[10px] ring-1 ring-card ${
+                      className={`flex h-6 w-6 items-center justify-center rounded-full text-sm ring-1 ring-card ${
                         p.id === currentPlayerId ? "ring-2 ring-primary" : ""
                       }`}
-                      style={{ background: AVATARS[p.avatarId % AVATARS.length].color, color: "white" }}
+                      style={{
+                        background: AVATARS[p.avatarId % AVATARS.length].color,
+                        color: "white",
+                      }}
                       title={p.name}
                     >
                       {AVATARS[p.avatarId % AVATARS.length].emoji}

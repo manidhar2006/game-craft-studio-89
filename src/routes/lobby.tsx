@@ -14,7 +14,12 @@ function wait(ms: number) {
 }
 
 function isSchemaCacheError(error: unknown) {
-  return typeof error === "object" && error !== null && "code" in error && (error as { code?: string }).code === "PGRST002";
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: string }).code === "PGRST002"
+  );
 }
 
 export const Route = createFileRoute("/lobby")({
@@ -39,7 +44,11 @@ function LobbyPage() {
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const { data } = await supabase.from("profiles").select("display_name, avatar_id").eq("id", user.id).maybeSingle();
+      const { data } = await supabase
+        .from("profiles")
+        .select("display_name, avatar_id")
+        .eq("id", user.id)
+        .maybeSingle();
       if (data) {
         setDisplayName(data.display_name ?? "");
         setAvatarId(data.avatar_id ?? 0);
@@ -51,7 +60,9 @@ function LobbyPage() {
 
   async function saveProfile() {
     if (!user) return;
-    await supabase.from("profiles").upsert({ id: user.id, display_name: displayName, avatar_id: avatarId });
+    await supabase
+      .from("profiles")
+      .upsert({ id: user.id, display_name: displayName, avatar_id: avatarId });
   }
 
   async function startSolo() {
@@ -83,7 +94,9 @@ function LobbyPage() {
 
       if (error || !room) {
         console.error("Supabase create room error:", error);
-        toast.error("Could not create room. If this is the first request after DB changes, wait a few seconds and retry.");
+        toast.error(
+          "Could not create room. If this is the first request after DB changes, wait a few seconds and retry.",
+        );
         setCreating(false);
         return;
       }
@@ -140,7 +153,13 @@ function LobbyPage() {
     }
 
     const { error: joinError } = await supabase.from("room_players").upsert(
-      { room_id: room.id, player_id: user.id, display_name: displayName, avatar_id: null, seat_order: 999 },
+      {
+        room_id: room.id,
+        player_id: user.id,
+        display_name: displayName,
+        avatar_id: null,
+        seat_order: 999,
+      },
       { onConflict: "room_id,player_id" },
     );
     if (joinError) {
@@ -167,7 +186,9 @@ function LobbyPage() {
     }
 
     if (players) {
-      const usedSeats = new Set(players.filter((p) => p.player_id !== user.id).map((p) => p.seat_order));
+      const usedSeats = new Set(
+        players.filter((p) => p.player_id !== user.id).map((p) => p.seat_order),
+      );
       let nextSeat = 0;
       while (usedSeats.has(nextSeat)) nextSeat += 1;
       await supabase
@@ -215,7 +236,9 @@ function LobbyPage() {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
             <Card className="w-full max-w-md p-6">
               <h3 className="text-lg font-semibold">Confirm your avatar</h3>
-              <p className="mt-2 text-sm text-muted-foreground">Select an avatar and confirm to proceed.</p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Select an avatar and confirm to proceed.
+              </p>
               <div className="mt-4 flex flex-wrap gap-2">
                 {AVATARS.map((a) => (
                   <button
@@ -223,7 +246,9 @@ function LobbyPage() {
                     type="button"
                     onClick={() => setAvatarId(a.id)}
                     className={`flex h-12 w-12 items-center justify-center rounded-full text-2xl transition-all ${
-                      avatarId === a.id ? "ring-2 ring-primary ring-offset-2 ring-offset-background scale-110" : "opacity-70 hover:opacity-100"
+                      avatarId === a.id
+                        ? "ring-2 ring-primary ring-offset-2 ring-offset-background scale-110"
+                        : "opacity-70 hover:opacity-100"
                     }`}
                     style={{ backgroundColor: a.color, color: "white" }}
                     aria-label={a.name}
@@ -233,7 +258,9 @@ function LobbyPage() {
                 ))}
               </div>
               <div className="mt-6 flex justify-end gap-2">
-                <Button variant="ghost" onClick={() => setPendingAction(null)}>Cancel</Button>
+                <Button variant="ghost" onClick={() => setPendingAction(null)}>
+                  Cancel
+                </Button>
                 <Button onClick={confirmPendingAction}>Confirm</Button>
               </div>
             </Card>
@@ -244,15 +271,25 @@ function LobbyPage() {
           <Card className="p-6 flex flex-col">
             <Dices className="h-7 w-7 text-primary" />
             <h3 className="mt-4 text-lg font-semibold">Solo Practice</h3>
-            <p className="mt-1 text-sm text-muted-foreground flex-1">Play vs computer. Learn the principles at your pace.</p>
-            <Button className="mt-4" onClick={startSolo}>Play Solo</Button>
+            <p className="mt-1 text-sm text-muted-foreground flex-1">
+              Play vs computer. Learn the principles at your pace.
+            </p>
+            <Button className="mt-4" onClick={startSolo}>
+              Play Solo
+            </Button>
           </Card>
 
           <Card className="p-6 flex flex-col">
             <Plus className="h-7 w-7 text-primary" />
             <h3 className="mt-4 text-lg font-semibold">Create Room</h3>
-            <p className="mt-1 text-sm text-muted-foreground flex-1">Generate a code and invite up to 4 players.</p>
-            <Button className="mt-4" onClick={() => setShowCreateRoomModal(true)} disabled={creating || !displayName}>
+            <p className="mt-1 text-sm text-muted-foreground flex-1">
+              Generate a code and invite up to 4 players.
+            </p>
+            <Button
+              className="mt-4"
+              onClick={() => setShowCreateRoomModal(true)}
+              disabled={creating || !displayName}
+            >
               {creating ? "Creating…" : "Create Room"}
             </Button>
           </Card>
@@ -266,7 +303,12 @@ function LobbyPage() {
               onChange={(e) => setJoinCode(e.target.value)}
               className="mt-3 uppercase tracking-wider"
             />
-            <Button className="mt-3" variant="secondary" onClick={joinRoom} disabled={joining || !joinCode || !displayName}>
+            <Button
+              className="mt-3"
+              variant="secondary"
+              onClick={joinRoom}
+              disabled={joining || !joinCode || !displayName}
+            >
               {joining ? "Joining…" : "Join Room"}
             </Button>
           </Card>
@@ -276,7 +318,9 @@ function LobbyPage() {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
             <Card className="w-full max-w-md p-6">
               <h3 className="text-lg font-semibold">Create Multiplayer Room</h3>
-              <p className="mt-2 text-sm text-muted-foreground">Choose number of players (including you).</p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Choose number of players (including you).
+              </p>
               <div className="mt-4 grid grid-cols-3 gap-2">
                 {[2, 3, 4].map((n) => (
                   <Button
@@ -290,7 +334,9 @@ function LobbyPage() {
                 ))}
               </div>
               <div className="mt-6 flex justify-end gap-2">
-                <Button variant="ghost" onClick={() => setShowCreateRoomModal(false)}>Cancel</Button>
+                <Button variant="ghost" onClick={() => setShowCreateRoomModal(false)}>
+                  Cancel
+                </Button>
                 <Button onClick={() => createRoom(selectedPlayerCount)} disabled={creating}>
                   {creating ? "Creating…" : "Create"}
                 </Button>

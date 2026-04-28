@@ -3,7 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Gavel } from "lucide-react";
 import type { RegulatorCard } from "@/lib/game/engine-types";
 
-interface Props { card: RegulatorCard; onClose: () => void }
+interface Props {
+  card: RegulatorCard;
+  onClose: () => void;
+}
 
 export function RegulatorCardModal({ card, onClose }: Props) {
   return (

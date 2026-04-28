@@ -77,25 +77,52 @@ function AuthPage() {
             {isSignup ? "Create your account" : "Welcome back"}
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            {isSignup ? "Pick a name your fellow players will see at the table." : "Sign in to enter the lobby."}
+            {isSignup
+              ? "Pick a name your fellow players will see at the table."
+              : "Sign in to enter the lobby."}
           </p>
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
             {isSignup && (
               <div className="space-y-1.5">
                 <Label htmlFor="name">Display name</Label>
-                <Input id="name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="e.g. Aarav" className="h-11 rounded-xl" />
+                <Input
+                  id="name"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder="e.g. Aarav"
+                  className="h-11 rounded-xl"
+                />
               </div>
             )}
             <div className="space-y-1.5">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="h-11 rounded-xl" />
+              <Input
+                id="email"
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="h-11 rounded-xl"
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} className="h-11 rounded-xl" />
+              <Input
+                id="password"
+                type="password"
+                required
+                minLength={6}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="h-11 rounded-xl"
+              />
             </div>
-            <Button type="submit" disabled={submitting} className="h-11 w-full rounded-xl text-base">
+            <Button
+              type="submit"
+              disabled={submitting}
+              className="h-11 w-full rounded-xl text-base"
+            >
               {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {isSignup ? "Create account" : "Sign in"}
             </Button>
@@ -103,7 +130,11 @@ function AuthPage() {
 
           <div className="mt-6 text-center text-sm text-muted-foreground">
             {isSignup ? "Already have an account?" : "New here?"}{" "}
-            <Link to="/auth" search={{ mode: isSignup ? "signin" : "signup" }} className="font-medium text-primary underline-offset-4 hover:underline">
+            <Link
+              to="/auth"
+              search={{ mode: isSignup ? "signin" : "signup" }}
+              className="font-medium text-primary underline-offset-4 hover:underline"
+            >
               {isSignup ? "Sign in" : "Create one"}
             </Link>
           </div>

@@ -35,17 +35,14 @@ export interface ActiveMcq {
 export interface RegulatorCard {
   title: string;
   body: string;
-  effect: { type: "credits"; amount: number } | { type: "move"; to: number } | { type: "jail" } | { type: "none" };
+  effect:
+    | { type: "credits"; amount: number }
+    | { type: "move"; to: number }
+    | { type: "jail" }
+    | { type: "none" };
 }
 
-export type Phase =
-  | "idle"
-  | "rolling"
-  | "moving"
-  | "mcq"
-  | "regulator"
-  | "turn_end"
-  | "ended";
+export type Phase = "idle" | "rolling" | "moving" | "mcq" | "regulator" | "turn_end" | "ended";
 
 export interface GameState {
   board: BoardTile[];
@@ -53,11 +50,12 @@ export interface GameState {
   currentPlayerId: string;
   propertyOwners: Record<number, string>; // principleNo -> playerId
   phase: Phase;
-  lastRoll: [number, number] | null;
+  lastRoll: number | null;
   message: string;
   activeMcq: ActiveMcq | null;
   activeCard: RegulatorCard | null;
   winner: Player | null;
+  penaltyPot?: number;
   /** Pending action context after MCQ */
   pendingBuy?: { principle: PrincipleConfig } | null;
   pendingRent?: { principle: PrincipleConfig; ownerId: string } | null;

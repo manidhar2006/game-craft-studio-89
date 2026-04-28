@@ -1,18 +1,16 @@
-import { useEffect, useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { useEffect, useRef, useState } from "react";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Hash, Sparkles, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { GameBoard } from "./GameBoard";
 import { PlayerPanel } from "./PlayerPanel";
 import { DiceRoller } from "./DiceRoller";
-import { MCQModal } from "./MCQModal";
-import { RegulatorCardModal } from "./RegulatorCardModal";
-import { EndScreen } from "./EndScreen";
 import { buildInitialGameState, useSoloGame } from "@/lib/game/use-solo-game";
-import type { GameState, Player } from "@/lib/game/engine-types";
+import type { GameState } from "@/lib/game/engine-types";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 import { AVATARS } from "@/lib/game/constants";
 import { toast } from "sonner";
 
@@ -27,8 +25,12 @@ interface RoomPlayer {
   seat_order: number;
 }
 
+const ROOM_CODE_RE = /^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export function GameSession({ roomId }: Props) {
   const isSolo = roomId === "solo";
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [profile, setProfile] = useState<{ display_name: string; avatar_id: number } | null>(null);
   const [roomInfo, setRoomInfo] = useState<{
@@ -39,34 +41,139 @@ export function GameSession({ roomId }: Props) {
   } | null>(null);
   const [roomPlayers, setRoomPlayers] = useState<RoomPlayer[]>([]);
   const [loadingRoomData, setLoadingRoomData] = useState(false);
+  const [joiningRoom, setJoiningRoom] = useState(false);
   const [savingAvatar, setSavingAvatar] = useState(false);
   const [startingGame, setStartingGame] = useState(false);
   const [roomGameState, setRoomGameState] = useState<GameState | null>(null);
+  const [resolvedRoomId, setResolvedRoomId] = useState<string | null>(null);
+  const [resolvedRoomCode, setResolvedRoomCode] = useState<string | null>(null);
+  const joinAttemptRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
-    supabase.from("profiles").select("display_name, avatar_id").eq("id", user.id).maybeSingle().then(({ data }) => {
-      if (data) setProfile({ display_name: data.display_name, avatar_id: data.avatar_id ?? 0 });
-    });
+    supabase
+      .from("profiles")
+      .select("display_name, avatar_id")
+      .eq("id", user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) setProfile({ display_name: data.display_name, avatar_id: data.avatar_id ?? 0 });
+      });
   }, [user]);
 
   useEffect(() => {
-    if (isSolo || !user) return undefined;
+    if (isSolo || !user) return;
+
+    const raw = roomId.trim();
+    if (UUID_RE.test(raw)) {
+      setResolvedRoomId(raw);
+      return;
+    }
+
+    const code = raw.toUpperCase();
+    if (!ROOM_CODE_RE.test(code)) {
+      toast.error("Invalid room code. Please recheck the invite link.");
+      navigate({ to: "/lobby" });
+      return;
+    }
+
+    let active = true;
+    (async () => {
+      const { data: room, error } = await supabase
+        .from("rooms")
+        .select("id, code")
+        .eq("code", code)
+        .maybeSingle();
+
+      if (!active) return;
+      if (error || !room) {
+        console.error("Supabase room lookup error:", error);
+        toast.error("Room not found. Please ask the host for a new link.");
+        navigate({ to: "/lobby" });
+        return;
+      }
+
+      setResolvedRoomId(room.id);
+      setResolvedRoomCode(room.code);
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [isSolo, navigate, roomId, user]);
+
+  useEffect(() => {
+    if (isSolo || !user || !resolvedRoomId) return undefined;
+
+    const displayName = profile?.display_name ?? user.email?.split("@")[0] ?? "Player";
+
+    const ensureRoomMembership = async (
+      room: {
+        id: string;
+        max_players: number | null;
+        status: "waiting" | "in_progress" | "completed";
+        code: string;
+      },
+      players: RoomPlayer[] | null,
+    ) => {
+      if (players?.some((player) => player.player_id === user.id)) return;
+      if (room.status !== "waiting") {
+        toast.error("That room has already started.");
+        navigate({ to: "/lobby" });
+        return;
+      }
+      if (joinAttemptRef.current === room.id) return;
+
+      joinAttemptRef.current = room.id;
+      setJoiningRoom(true);
+      const seatOrder = players?.length ?? 0;
+
+      const { error: joinError } = await supabase.from("room_players").upsert(
+        {
+          room_id: room.id,
+          player_id: user.id,
+          display_name: displayName,
+          avatar_id: null,
+          seat_order: seatOrder,
+        },
+        { onConflict: "room_id,player_id", ignoreDuplicates: true },
+      );
+
+      if (joinError) {
+        console.error("Supabase room_players join error:", joinError);
+        toast.error("Could not join the room. Please try again.");
+        setJoiningRoom(false);
+        joinAttemptRef.current = null;
+        return;
+      }
+
+      setJoiningRoom(false);
+    };
 
     const loadRoomData = async () => {
       setLoadingRoomData(true);
-      const [{ data: room }, { data: players }] = await Promise.all([
-        supabase
-          .from("rooms")
-          .select("code, max_players, host_id, status, game_state")
-          .eq("id", roomId)
-          .maybeSingle(),
-        supabase
-          .from("room_players")
-          .select("player_id, display_name, avatar_id, seat_order")
-          .eq("room_id", roomId)
-          .order("seat_order", { ascending: true }),
-      ]);
+
+      const [{ data: room, error: roomError }, { data: players, error: playersError }] =
+        await Promise.all([
+          supabase
+            .from("rooms")
+            .select("id, code, max_players, host_id, status, game_state")
+            .eq("id", resolvedRoomId)
+            .maybeSingle(),
+          supabase
+            .from("room_players")
+            .select("player_id, display_name, avatar_id, seat_order")
+            .eq("room_id", resolvedRoomId)
+            .order("seat_order", { ascending: true }),
+        ]);
+
+      if (roomError) {
+        console.error("Supabase room lookup error:", roomError);
+      }
+      if (playersError) {
+        console.error("Supabase room_players lookup error:", playersError);
+      }
+
       if (room) {
         setRoomInfo({
           code: room.code,
@@ -75,32 +182,46 @@ export function GameSession({ roomId }: Props) {
           status: room.status,
         });
         setRoomGameState((room.game_state as GameState | null) ?? null);
+        setResolvedRoomCode(room.code);
+      } else {
+        toast.error("Room not found. Please return to the lobby.");
+        navigate({ to: "/lobby" });
       }
+
       if (players) {
         setRoomPlayers(
-          players.map((p) => ({
-            player_id: p.player_id,
-            display_name: p.display_name,
-            avatar_id: p.avatar_id,
-            seat_order: p.seat_order,
+          players.map((player) => ({
+            player_id: player.player_id,
+            display_name: player.display_name,
+            avatar_id: player.avatar_id,
+            seat_order: player.seat_order,
           })),
         );
       }
+
       setLoadingRoomData(false);
+      if (room) {
+        await ensureRoomMembership(room, players ?? null);
+      }
     };
 
     void loadRoomData();
 
     const channel = supabase
-      .channel(`room-setup-${roomId}`)
+      .channel(`room-setup-${resolvedRoomId}`)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "room_players", filter: `room_id=eq.${roomId}` },
+        {
+          event: "*",
+          schema: "public",
+          table: "room_players",
+          filter: `room_id=eq.${resolvedRoomId}`,
+        },
         () => void loadRoomData(),
       )
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "rooms", filter: `id=eq.${roomId}` },
+        { event: "*", schema: "public", table: "rooms", filter: `id=eq.${resolvedRoomId}` },
         () => void loadRoomData(),
       )
       .subscribe();
@@ -108,28 +229,30 @@ export function GameSession({ roomId }: Props) {
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [isSolo, roomId, user]);
+  }, [isSolo, navigate, profile?.display_name, resolvedRoomId, user]);
 
-  const meInRoom = !isSolo ? roomPlayers.find((p) => p.player_id === user?.id) : null;
+  const meInRoom = !isSolo ? roomPlayers.find((player) => player.player_id === user?.id) : null;
   const requiredPlayers = roomInfo?.max_players ?? 4;
   const isHost = !isSolo && !!user && roomInfo?.host_id === user.id;
   const playersReady = !isSolo && roomPlayers.length >= requiredPlayers;
-  const avatarsReady = !isSolo && roomPlayers.every((p) => p.avatar_id !== null);
+  const avatarsReady = !isSolo && roomPlayers.every((player) => player.avatar_id !== null);
   const setupReady = playersReady && avatarsReady;
   const roomStarted = !isSolo && roomInfo?.status === "in_progress";
 
   async function startRoomGame() {
-    if (!user || isSolo || !isHost || !setupReady) return;
+    if (!user || isSolo || !isHost || !setupReady || !resolvedRoomId) return;
+
     setStartingGame(true);
     const firstPlayer = [...roomPlayers].sort((a, b) => a.seat_order - b.seat_order)[0];
-    const hostPlayer = roomPlayers.find((p) => p.player_id === user.id);
+    const hostPlayer = roomPlayers.find((player) => player.player_id === user.id);
     const opponents = roomPlayers
-      .filter((p) => p.player_id !== user.id)
-      .map((p) => ({
-        id: p.player_id,
-        name: p.display_name,
-        avatarId: p.avatar_id ?? (p.seat_order % AVATARS.length),
+      .filter((player) => player.player_id !== user.id)
+      .map((player) => ({
+        id: player.player_id,
+        name: player.display_name,
+        avatarId: player.avatar_id ?? player.seat_order % AVATARS.length,
       }));
+
     const initialGameState = buildInitialGameState(
       user.id,
       hostPlayer?.display_name ?? profile?.display_name ?? "Host",
@@ -137,53 +260,64 @@ export function GameSession({ roomId }: Props) {
       opponents,
     );
     initialGameState.currentPlayerId = firstPlayer?.player_id ?? user.id;
+
     const { error } = await supabase
       .from("rooms")
       .update({
         status: "in_progress",
         current_turn_player_id: firstPlayer?.player_id ?? null,
-        game_state: initialGameState,
+        game_state: initialGameState as unknown as Json,
       })
-      .eq("id", roomId)
+      .eq("id", resolvedRoomId)
       .eq("host_id", user.id);
+
     if (error) {
       console.error("Start room game error", error);
       toast.error("Could not start game. Please try again.");
     }
+
     setStartingGame(false);
   }
 
   async function selectRoomAvatar(nextAvatarId: number) {
-    if (!user || isSolo) return;
+    if (!user || isSolo || !resolvedRoomId) return;
+
     setSavingAvatar(true);
     const { error } = await supabase
       .from("room_players")
       .update({ avatar_id: nextAvatarId })
-      .eq("room_id", roomId)
+      .eq("room_id", resolvedRoomId)
       .eq("player_id", user.id);
+
     if (error) {
       console.error("Avatar selection error", error);
       toast.error("That avatar is already taken. Pick another one.");
     }
+
     setSavingAvatar(false);
   }
 
   const roomOpponents = !isSolo
     ? roomPlayers
-        .filter((p) => p.player_id !== user?.id)
-        .map((p) => ({
-          id: p.player_id,
-          name: p.display_name,
-          avatarId: p.avatar_id ?? (p.seat_order % AVATARS.length),
+        .filter((player) => player.player_id !== user?.id)
+        .map((player) => ({
+          id: player.player_id,
+          name: player.display_name,
+          avatarId: player.avatar_id ?? player.seat_order % AVATARS.length,
         }))
     : undefined;
 
   async function persistRoomState(nextState: GameState) {
-    if (isSolo || !roomStarted || !user) return;
+    if (isSolo || !roomStarted || !user || !resolvedRoomId) return;
+
     const { error } = await supabase
       .from("rooms")
-      .update({ game_state: nextState, current_turn_player_id: nextState.currentPlayerId })
-      .eq("id", roomId);
+      .update({
+        game_state: nextState as unknown as Json,
+        current_turn_player_id: nextState.currentPlayerId,
+      })
+      .eq("id", resolvedRoomId);
+
     if (error) {
       console.error("Persist room game_state error", error);
     }
@@ -191,63 +325,76 @@ export function GameSession({ roomId }: Props) {
 
   const game = useSoloGame({
     enabled: !!profile && (isSolo || (roomStarted && !!roomGameState)),
-    humanName: isSolo ? (profile?.display_name ?? "You") : (meInRoom?.display_name ?? profile?.display_name ?? "You"),
+    humanName: isSolo
+      ? (profile?.display_name ?? "You")
+      : (meInRoom?.display_name ?? profile?.display_name ?? "You"),
     humanAvatar: isSolo ? (profile?.avatar_id ?? 0) : (meInRoom?.avatar_id ?? 0),
     opponents: roomOpponents,
     localPlayerId: isSolo ? "human" : (user?.id ?? "human"),
     autoPlayBots: isSolo,
     initialState: isSolo ? null : roomGameState,
     externalState: isSolo ? null : roomGameState,
-    onStateChange: isSolo ? undefined : (nextState) => {
-      void persistRoomState(nextState);
-    },
+    onStateChange: isSolo
+      ? undefined
+      : (nextState) => {
+          void persistRoomState(nextState);
+        },
   });
 
-  if (!profile || (!isSolo && loadingRoomData)) {
-    return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Setting up the board…</div>;
+  if (!profile || (!isSolo && !roomStarted && (loadingRoomData || joiningRoom || !resolvedRoomId))) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-muted-foreground">
+        Setting up the board…
+      </div>
+    );
   }
 
   if (!isSolo && !roomStarted) {
     const takenByOthers = new Set(
       roomPlayers
-        .filter((p) => p.player_id !== user?.id && p.avatar_id !== null)
-        .map((p) => p.avatar_id as number),
+        .filter((player) => player.player_id !== user?.id && player.avatar_id !== null)
+        .map((player) => player.avatar_id as number),
     );
     const orderedPlayers = [...roomPlayers].sort((a, b) => a.seat_order - b.seat_order);
-    const slots = Array.from({ length: requiredPlayers }, (_, idx) => orderedPlayers[idx] ?? null);
+    const slots = Array.from({ length: requiredPlayers }, (_, index) => orderedPlayers[index] ?? null);
 
     return (
       <div className="min-h-screen bg-background">
-        <header className="flex items-center justify-between px-6 py-4 border-b border-border/60">
-          <Link to="/lobby" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-4 w-4" /> Lobby
-          </Link>
+        <header className="flex items-center justify-between border-b border-border/60 px-6 py-4">
+          <div />
           <div className="flex items-center gap-2 text-sm font-medium">
             <Sparkles className="h-4 w-4 text-accent" /> Room Setup
           </div>
           <div />
         </header>
 
-        <main className="mx-auto max-w-4xl px-6 py-8 grid gap-6 lg:grid-cols-2">
-          <Card className="p-6 space-y-4">
+        <main className="mx-auto grid max-w-4xl gap-6 px-6 py-8 lg:grid-cols-2">
+          <Card className="space-y-4 p-6">
             <h2 className="text-xl font-semibold">Room Details</h2>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Hash className="h-4 w-4" /> Room ID: <span className="font-mono text-foreground">{roomInfo?.code ?? roomId.slice(0, 8)}</span>
+              <Hash className="h-4 w-4" /> Room ID:{" "}
+              <span className="font-mono text-foreground">
+                {roomInfo?.code ?? resolvedRoomCode ?? roomId.slice(0, 8)}
+              </span>
             </div>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Users className="h-4 w-4" /> Players joined: <span className="text-foreground">{roomPlayers.length}/{requiredPlayers}</span>
+              <Users className="h-4 w-4" /> Players joined:{" "}
+              <span className="text-foreground">
+                {roomPlayers.length}/{requiredPlayers}
+              </span>
             </div>
             <div className="space-y-2">
-              {slots.map((slot, idx) => {
-                const avatar = slot?.avatar_id !== null && slot?.avatar_id !== undefined
-                  ? AVATARS[slot.avatar_id % AVATARS.length]
-                  : null;
+              {slots.map((slot, index) => {
+                const avatar =
+                  slot?.avatar_id !== null && slot?.avatar_id !== undefined
+                    ? AVATARS[slot.avatar_id % AVATARS.length]
+                    : null;
                 return (
                   <div
-                    key={slot?.player_id ?? `slot-${idx}`}
+                    key={slot?.player_id ?? `slot-${index}`}
                     className="flex items-center justify-between rounded-lg border border-border/70 bg-secondary/30 px-3 py-2"
                   >
-                    <div className="flex items-center gap-2 min-w-0">
+                    <div className="flex min-w-0 items-center gap-2">
                       <div
                         className={`flex h-8 w-8 items-center justify-center rounded-full text-base ${
                           avatar ? "text-white" : "bg-muted text-muted-foreground"
@@ -257,17 +404,19 @@ export function GameSession({ roomId }: Props) {
                         {avatar ? avatar.emoji : "?"}
                       </div>
                       <div className="min-w-0">
-                        <div className="text-sm font-medium truncate">
-                          {slot ? slot.display_name : `Open slot ${idx + 1}`}
+                        <div className="truncate text-sm font-medium">
+                          {slot ? slot.display_name : `Open slot ${index + 1}`}
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          {slot ? (avatar ? avatar.name : "Avatar pending") : "Share the room code to invite"}
+                          {slot
+                            ? avatar
+                              ? avatar.name
+                              : "Avatar pending"
+                            : "Share the room code to invite"}
                         </div>
                       </div>
                     </div>
-                    {slot?.player_id === user?.id ? (
-                      <span className="text-xs text-primary">You</span>
-                    ) : null}
+                    {slot?.player_id === user?.id ? <span className="text-xs text-primary">You</span> : null}
                   </div>
                 );
               })}
@@ -286,36 +435,43 @@ export function GameSession({ roomId }: Props) {
             )}
           </Card>
 
-          <Card className="p-6 space-y-4">
+          <Card className="space-y-4 p-6">
             <h2 className="text-xl font-semibold">Select Your Avatar</h2>
-            <p className="text-sm text-muted-foreground">Once selected, that avatar cannot be chosen by other players.</p>
+            <p className="text-sm text-muted-foreground">
+              Once selected, that avatar cannot be chosen by other players.
+            </p>
             <div className="flex flex-wrap gap-2">
-              {AVATARS.map((a) => {
-                const selectedByMe = meInRoom?.avatar_id === a.id;
-                const taken = takenByOthers.has(a.id);
+              {AVATARS.map((avatar) => {
+                const selectedByMe = meInRoom?.avatar_id === avatar.id;
+                const taken = takenByOthers.has(avatar.id);
                 return (
                   <button
-                    key={a.id}
+                    key={avatar.id}
                     type="button"
                     disabled={taken || savingAvatar}
-                    onClick={() => void selectRoomAvatar(a.id)}
+                    onClick={() => void selectRoomAvatar(avatar.id)}
                     className={`flex h-12 w-12 items-center justify-center rounded-full text-2xl transition-all ${
                       selectedByMe
-                        ? "ring-2 ring-primary ring-offset-2 ring-offset-background scale-110"
+                        ? "scale-110 ring-2 ring-primary ring-offset-2 ring-offset-background"
                         : taken
-                          ? "opacity-30 cursor-not-allowed"
+                          ? "cursor-not-allowed opacity-30"
                           : "opacity-80 hover:opacity-100"
                     }`}
-                    style={{ backgroundColor: a.color, color: "white" }}
-                    aria-label={a.name}
+                    style={{ backgroundColor: avatar.color, color: "white" }}
+                    aria-label={avatar.name}
                   >
-                    {a.emoji}
+                    {avatar.emoji}
                   </button>
                 );
               })}
             </div>
             <div className="text-sm text-muted-foreground">
-              Your avatar: <span className="text-foreground">{meInRoom?.avatar_id !== null && meInRoom?.avatar_id !== undefined ? AVATARS[meInRoom.avatar_id % AVATARS.length].name : "Not selected"}</span>
+              Your avatar:{" "}
+              <span className="text-foreground">
+                {meInRoom?.avatar_id !== null && meInRoom?.avatar_id !== undefined
+                  ? AVATARS[meInRoom.avatar_id % AVATARS.length].name
+                  : "Not selected"}
+              </span>
             </div>
           </Card>
         </main>
@@ -324,75 +480,184 @@ export function GameSession({ roomId }: Props) {
   }
 
   if (!game.state) {
-    return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Starting game…</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center text-muted-foreground">
+        Starting game…
+      </div>
+    );
   }
 
   const { state } = game;
   const localPlayerId = isSolo ? "human" : (user?.id ?? "");
+  const currentPlayer = state.players.find((player) => player.id === state.currentPlayerId);
+  const isMyTurn = state.currentPlayerId === localPlayerId;
+  const activeMcq = state.activeMcq;
+  const activeCard = state.activeCard;
+  const winner = state.winner;
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="flex items-center justify-between px-6 py-4 border-b border-border/60">
-        <Link to="/lobby" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="h-4 w-4" /> Lobby
-        </Link>
-        <div className="flex items-center gap-2 text-sm font-medium">
-          <Sparkles className="h-4 w-4 text-accent" /> {isSolo ? "Solo Practice" : `Room ${roomId.slice(0, 8)}…`}
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,oklch(0.985_0.01_96),oklch(0.96_0.01_140))] text-foreground">
+      <header className="flex items-center justify-between border-b border-border/60 bg-background/70 px-6 py-4 backdrop-blur">
+        <div />
+        <div className="flex flex-col items-center text-center">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <Sparkles className="h-4 w-4 text-accent" />
+            {isSolo ? "Solo Practice" : `Room ${roomInfo?.code ?? resolvedRoomCode ?? roomId.slice(0, 8)}…`}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {currentPlayer ? `${currentPlayer.name}'s turn` : "Waiting for turn state…"}
+          </div>
         </div>
-        <Button size="sm" variant="ghost" onClick={game.reset}>Restart</Button>
+        <Button size="sm" variant="ghost" onClick={game.leaveGame}>
+          Leave
+        </Button>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-6 lg:py-8 grid gap-6 lg:grid-cols-[1fr_320px]">
-        <section className="flex flex-col items-center">
+      <main className="mx-auto grid max-w-[1600px] gap-6 px-4 py-6 lg:grid-cols-[280px_minmax(0,1fr)_340px] lg:px-6 lg:py-8">
+        <aside className="space-y-4">
+          <Card className="border-border/70 bg-card/90 p-4 shadow-soft">
+            <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Match</div>
+            <div className="mt-2 text-lg font-semibold">
+              {isSolo ? "Practice Room" : `Room ${roomInfo?.code ?? resolvedRoomCode ?? "…"}`}
+            </div>
+            <div className="mt-1 text-sm text-muted-foreground">
+              {state.phase === "ended" && winner
+                ? `Winner: ${winner.name}`
+                : isMyTurn
+                  ? "You are up"
+                  : `${currentPlayer?.name ?? "Next player"} is acting`}
+            </div>
+          </Card>
+
+          <div className="space-y-3">
+            {state.players.map((player) => (
+              <PlayerPanel
+                key={player.id}
+                player={player}
+                avatar={AVATARS[player.avatarId % AVATARS.length]}
+                isCurrent={player.id === state.currentPlayerId}
+              />
+            ))}
+          </div>
+        </aside>
+
+        <section className="flex flex-col items-center gap-5">
           <GameBoard
             tiles={state.board}
             players={state.players}
             currentPlayerId={state.currentPlayerId}
             propertyOwners={state.propertyOwners}
+            centerContent={
+              <DiceRoller
+                disabled={!game.canRoll}
+                rolling={state.phase === "rolling"}
+                lastRoll={state.lastRoll}
+                onRoll={game.rollDice}
+                currentName={currentPlayer?.name ?? ""}
+                isHumanTurn={isMyTurn}
+              />
+            }
           />
-          <div className="mt-6 w-full max-w-2xl">
-            <DiceRoller
-              disabled={!game.canRoll}
-              rolling={state.phase === "rolling"}
-              lastRoll={state.lastRoll}
-              onRoll={game.rollDice}
-              currentName={state.players.find((p: Player) => p.id === state.currentPlayerId)?.name ?? ""}
-              isHumanTurn={state.currentPlayerId === localPlayerId}
-            />
-            {state.message && (
-              <div className="mt-3 text-center text-sm text-muted-foreground italic">{state.message}</div>
-            )}
-          </div>
+
+          
         </section>
 
-        <aside className="space-y-3">
-          {state.players.map((p: Player) => (
-            <PlayerPanel
-              key={p.id}
-              player={p}
-              avatar={AVATARS[p.avatarId % AVATARS.length]}
-              isCurrent={p.id === state.currentPlayerId}
-            />
-          ))}
+        <aside className="space-y-4">
+          <Card className="border-border/70 bg-card/90 p-4 shadow-soft">
+            <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Action Desk</div>
+            <div className="mt-3 space-y-3">
+              {state.phase === "mcq" && activeMcq ? (
+                <>
+                  <div>
+                    <div className="text-lg font-semibold">{activeMcq.principleName}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {activeMcq.mode === "buy"
+                        ? "Answer correctly to acquire this tile."
+                        : activeMcq.mode === "rent_dispute"
+                          ? "Answer correctly to avoid rent."
+                          : "Answer correctly to strengthen the tile."}
+                    </div>
+                  </div>
+                  <div className="rounded-2xl border border-border/60 bg-secondary/50 p-4 text-sm leading-relaxed">
+                    {activeMcq.question.text}
+                  </div>
+                  <div className="grid gap-2">
+                    {activeMcq.question.options.map((option) => (
+                      <Button
+                        key={option.key}
+                        variant="secondary"
+                        className="justify-start rounded-xl border border-border/60 bg-background px-3 py-6 text-left whitespace-normal break-words"
+                        onClick={() => game.answerMcq(option.key)}
+                        disabled={!isMyTurn}
+                      >
+                        <span className="mr-2 font-semibold">{option.key}.</span>
+                        <span>{option.text}</span>
+                      </Button>
+                    ))}
+                  </div>
+                  
+                </>
+              ) : state.phase === "regulator" && activeCard ? (
+                <>
+                  <div>
+                    <div className="text-lg font-semibold">{activeCard.title}</div>
+                    <div className="text-sm text-muted-foreground">Regulator event</div>
+                  </div>
+                  <div className="rounded-2xl border border-border/60 bg-secondary/50 p-4 text-sm leading-relaxed">
+                    {activeCard.body}
+                  </div>
+                  <Button onClick={game.acknowledgeCard} disabled={!isMyTurn} className="w-full rounded-xl">
+                    Acknowledge event
+                  </Button>
+                </>
+              ) : state.phase === "ended" && winner ? (
+                <>
+                  <div>
+                    <div className="text-lg font-semibold">{winner.name} wins</div>
+                    <div className="text-sm text-muted-foreground">Last compliant entity standing.</div>
+                  </div>
+                  <div className="rounded-2xl border border-border/60 bg-secondary/50 p-4 text-sm leading-relaxed">
+                    The match has ended. Keep the tab open to review the board or use the lobby to create a new room.
+                  </div>
+                  {isSolo ? (
+                    <Button onClick={game.reset} className="w-full rounded-xl">
+                      Play again
+                    </Button>
+                  ) : (
+                    <div className="text-sm text-muted-foreground">
+                      Ask the host to start a new room for another round.
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div>
+                    <div className="text-lg font-semibold">Turn ready</div>
+                    <div className="text-sm text-muted-foreground">
+                      Roll from the center of the board. Prompts stay in this panel.
+                    </div>
+                  </div>
+                  <div className="rounded-2xl border border-dashed border-border/60 bg-secondary/40 p-4 text-sm text-muted-foreground">
+                    {isMyTurn
+                      ? "Your roll is available."
+                      : `${currentPlayer?.name ?? "Another player"} is moving now.`}
+                  </div>
+                </>
+              )}
+            </div>
+          </Card>
+
+          <Card className="border-border/70 bg-card/90 p-4 shadow-soft">
+            <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Rules</div>
+            <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+              <li>• Roll once per turn.</li>
+              <li>• Principle tiles use inline questions.</li>
+              <li>• Regulator cards resolve in the action desk.</li>
+              <li>• No popups, no modal thrash.</li>
+            </ul>
+          </Card>
         </aside>
       </main>
-
-      {state.phase === "mcq" && state.activeMcq && (
-        <MCQModal
-          question={state.activeMcq.question}
-          principleName={state.activeMcq.principleName}
-          mode={state.activeMcq.mode}
-          onAnswer={game.answerMcq}
-        />
-      )}
-
-      {state.phase === "regulator" && state.activeCard && (
-        <RegulatorCardModal card={state.activeCard} onClose={game.acknowledgeCard} />
-      )}
-
-      {state.phase === "ended" && state.winner && (
-        <EndScreen winnerName={state.winner.name} onPlayAgain={game.reset} />
-      )}
     </div>
   );
 }

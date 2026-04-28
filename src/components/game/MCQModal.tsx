@@ -1,4 +1,10 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { CheckCircle2, XCircle } from "lucide-react";
@@ -29,7 +35,9 @@ export function MCQModal({ question, principleName, mode, onAnswer }: Props) {
         <DialogHeader>
           <DialogTitle className="text-xl">{principleName}</DialogTitle>
           <DialogDescription>
-            {mode === "buy" ? "Answer correctly to acquire this principle." : "Quick compliance check."}
+            {mode === "buy"
+              ? "Answer correctly to acquire this principle."
+              : "Quick compliance check."}
           </DialogDescription>
         </DialogHeader>
         <div className="mt-2 rounded-xl bg-secondary/60 border border-border/60 p-4 text-sm leading-relaxed">
@@ -40,34 +48,30 @@ export function MCQModal({ question, principleName, mode, onAnswer }: Props) {
             const isPick = picked === opt.key;
             const isCorrect = submitted && opt.key === question.correct;
             const isWrongPick = submitted && isPick && !correct;
-            return (
+              return (
               <button
                 key={opt.key}
                 disabled={submitted}
                 onClick={() => setPicked(opt.key)}
-                className={`flex items-start gap-3 rounded-lg border px-3 py-2.5 text-left text-sm transition-all ${
+                className={`flex items-start gap-3 rounded-lg border px-3 py-2.5 text-left text-sm transition-all whitespace-normal ${
                   isCorrect
                     ? "border-primary bg-primary/10"
                     : isWrongPick
-                    ? "border-destructive bg-destructive/10"
-                    : isPick
-                    ? "border-primary"
-                    : "border-border hover:border-primary/60 hover:bg-secondary/60"
+                      ? "border-destructive bg-destructive/10"
+                      : isPick
+                        ? "border-primary"
+                        : "border-border hover:border-primary/60 hover:bg-secondary/60"
                 }`}
               >
                 <span className="font-semibold">{opt.key}.</span>
-                <span className="flex-1">{opt.text}</span>
+                <span className="flex-1 whitespace-normal">{opt.text}</span>
                 {isCorrect && <CheckCircle2 className="h-4 w-4 text-primary" />}
                 {isWrongPick && <XCircle className="h-4 w-4 text-destructive" />}
               </button>
             );
           })}
         </div>
-        {submitted && question.explanation && (
-          <div className="mt-3 rounded-lg bg-muted p-3 text-xs text-muted-foreground">
-            <span className="font-semibold text-foreground">Why: </span>{question.explanation}
-          </div>
-        )}
+        
         <div className="mt-4 flex justify-end">
           <Button onClick={() => picked && onAnswer(picked)} disabled={!picked}>
             {submitted ? "Continue" : "Submit"}

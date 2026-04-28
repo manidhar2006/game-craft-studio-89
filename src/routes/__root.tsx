@@ -32,10 +32,18 @@ export const Route = createRootRoute({
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "DPDPA Compliance Tycoon — Master India's Data Protection Act through play" },
-      { name: "description", content: "An elegant Monopoly-style multiplayer learning game built around the 9 principles of India's Digital Personal Data Protection Act 2023." },
+      {
+        name: "description",
+        content:
+          "An elegant Monopoly-style multiplayer learning game built around the 9 principles of India's Digital Personal Data Protection Act 2023.",
+      },
       { name: "author", content: "Lovable" },
       { property: "og:title", content: "DPDPA Compliance Tycoon" },
-      { property: "og:description", content: "Learn the 9 principles of DPDPA 2023 through a calm, strategic multiplayer board game." },
+      {
+        property: "og:description",
+        content:
+          "Learn the 9 principles of DPDPA 2023 through a calm, strategic multiplayer board game.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },

@@ -12,7 +12,9 @@ export function PlayerPanel({ player, avatar, isCurrent }: Props) {
   const totalLayers = Object.values(player.layers).reduce((a, b) => a + b, 0);
   const principlesOwned = Object.keys(player.layers).length + 0; // engine tracks via owners separately
   return (
-    <Card className={`p-4 transition-all ${isCurrent ? "ring-2 ring-primary shadow-md" : ""} ${player.isEliminated ? "opacity-50" : ""}`}>
+    <Card
+      className={`p-4 transition-all ${isCurrent ? "ring-2 ring-primary shadow-md" : ""} ${player.isEliminated ? "opacity-50" : ""}`}
+    >
       <div className="flex items-center gap-3">
         <div
           className="flex h-10 w-10 items-center justify-center rounded-full text-xl text-white"

@@ -6,24 +6,25 @@
 
 ## 📋 Executive Summary
 
-| Item | Details |
-|---|---|
-| **Game Title** | DPDPA Compliance Tycoon |
-| **Genre** | Educational Multiplayer Board Game (Monopoly-style) |
-| **Players** | 2–4 per room |
-| **Session Duration** | 20–45 minutes |
-| **Platform** | Web (Desktop-first, Mobile-responsive) |
-| **Frontend Stack** | React + Vite + TypeScript + Tailwind CSS |
-| **Backend & Database** | **Lovable Cloud** (Supabase: Postgres + Auth + Realtime + Edge Functions) |
-| **Win Condition** | Last remaining active player wins |
-| **Core Loop** | Roll → Move → Land on Tile → Answer Question/Trigger Event → Take Action → End Turn |
-| **Question Bank** | 180 MCQs (90 general DPDPA + 90 Banking/Insurance sector), 20 per principle |
+| Item                   | Details                                                                             |
+| ---------------------- | ----------------------------------------------------------------------------------- |
+| **Game Title**         | DPDPA Compliance Tycoon                                                             |
+| **Genre**              | Educational Multiplayer Board Game (Monopoly-style)                                 |
+| **Players**            | 2–4 per room                                                                        |
+| **Session Duration**   | 20–45 minutes                                                                       |
+| **Platform**           | Web (Desktop-first, Mobile-responsive)                                              |
+| **Frontend Stack**     | React + Vite + TypeScript + Tailwind CSS                                            |
+| **Backend & Database** | **Lovable Cloud** (Supabase: Postgres + Auth + Realtime + Edge Functions)           |
+| **Win Condition**      | Last remaining active player wins                                                   |
+| **Core Loop**          | Roll → Move → Land on Tile → Answer Question/Trigger Event → Take Action → End Turn |
+| **Question Bank**      | 180 MCQs (90 general DPDPA + 90 Banking/Insurance sector), 20 per principle         |
 
 ---
 
 ## 🚀 Key Updates from Initial Spec
 
 ### What Changed?
+
 - ✅ **Simplified Game Flow** — Streamlined core loop with clear state progression
 - ✅ **No Duplicate Avatars** — Enforce unique avatar selection per player
 - ✅ **Dynamic Rent System** — Rent decreases on wrong answers; tiles become unowned at 0 rent
@@ -32,6 +33,7 @@
 - ✅ **Mobile Optimization** — Responsive design + WhatsApp sharing for lobby links
 
 ### What Stayed?
+
 - ✅ 9 DPDPA Principles as properties (color groups A, B, C, D)
 - ✅ 20-tile board with corners: START, FREE AUDIT, DPB HEARING, GO TO DPB HEARING
 - ✅ Regulator Cards (like Chance cards)
@@ -45,12 +47,14 @@
 ## 🎮 Game Modes
 
 ### Solo Mode
+
 - Player vs Computer opponent
 - Single-player experience
 - No multiplayer synchronization required
 - Good for learning / testing
 
 ### Multiplayer Mode
+
 - **Create Room** — Host generates Room ID + WhatsApp share link
 - **Join Room** — Players join via Room ID or invite link
 - **Player Limit** — 2–4 players per room
@@ -62,6 +66,7 @@
 ## 🏠 Landing Page
 
 ### Layout
+
 - **Top Right Corner:**
   - Sign In (if logged out)
   - Sign Up (if logged out)
@@ -75,6 +80,7 @@
     - "Get Started" → Auth (if needed) → Lobby
 
 ### User Flow
+
 ```
 Landing → (Auth if not logged in) → Lobby
 ```
@@ -84,12 +90,14 @@ Landing → (Auth if not logged in) → Lobby
 ## 🎭 Avatar Selection
 
 ### Mechanics
+
 - **8 Avatars Available:** 4 Male, 4 Female
 - **No Duplicates:** Once selected, avatar is unavailable to other players
 - **Mandatory Selection:** Players must choose before game starts
 - **Avatar = Token:** Selected avatar represents player on the board
 
 ### Workflow
+
 1. All players join room
 2. Each player picks unique avatar from available pool
 3. Host can only start game after ALL players have selected
@@ -125,44 +133,47 @@ CONSENT                                              ₹200
 
 ### Tile Inventory
 
-| # | Tile Name | Type | Details |
-|---|-----------|------|---------|
-| 0 | START | Corner | Pass = collect ₹200 |
-| 1 | P1: Lawful Processing | Property | Price: ₹60 |
-| 2 | Regulator Card | Event | Draw card |
-| 3 | P2: Notice & Transparency | Property | Price: ₹80 |
-| 4 | Compliance Penalty | Tax | Deduct ₹100 |
-| 5 | FREE AUDIT | Corner | Collect accumulated penalty pot |
-| 6 | P3: Consent | Property | Price: ₹140 |
-| 7 | P4: Purpose Limitation | Property | Price: ₹140 |
-| 8 | Regulator Card | Event | Draw card |
-| 9 | P5: Data Minimization | Property | Price: ₹160 |
-| 10 | DPB HEARING | Corner | Just visiting OR serving jail turns |
-| 11 | P6: Data Accuracy | Property | Price: ₹220 |
-| 12 | P7: Storage Limitation | Property | Price: ₹240 |
-| 13 | Regulator Card | Event | Draw card |
-| 14 | P8: Security & Integrity | Property | Price: ₹300 |
-| 15 | GO TO DPB HEARING | Corner | Send to jail (tile 10) |
-| 16 | Compliance Penalty | Tax | Deduct ₹150 |
-| 17 | P9: Accountability | Property | Price: ₹350 |
-| 18 | Regulator Card | Event | Draw card |
-| 19 | Personal Data Breach Fine | Tax | Deduct ₹200 |
+| #   | Tile Name                 | Type     | Details                             |
+| --- | ------------------------- | -------- | ----------------------------------- |
+| 0   | START                     | Corner   | Pass = collect ₹200                 |
+| 1   | P1: Lawful Processing     | Property | Price: ₹60                          |
+| 2   | Regulator Card            | Event    | Draw card                           |
+| 3   | P2: Notice & Transparency | Property | Price: ₹80                          |
+| 4   | Compliance Penalty        | Tax      | Deduct ₹100                         |
+| 5   | FREE AUDIT                | Corner   | Collect accumulated penalty pot     |
+| 6   | P3: Consent               | Property | Price: ₹140                         |
+| 7   | P4: Purpose Limitation    | Property | Price: ₹140                         |
+| 8   | Regulator Card            | Event    | Draw card                           |
+| 9   | P5: Data Minimization     | Property | Price: ₹160                         |
+| 10  | DPB HEARING               | Corner   | Just visiting OR serving jail turns |
+| 11  | P6: Data Accuracy         | Property | Price: ₹220                         |
+| 12  | P7: Storage Limitation    | Property | Price: ₹240                         |
+| 13  | Regulator Card            | Event    | Draw card                           |
+| 14  | P8: Security & Integrity  | Property | Price: ₹300                         |
+| 15  | GO TO DPB HEARING         | Corner   | Send to jail (tile 10)              |
+| 16  | Compliance Penalty        | Tax      | Deduct ₹150                         |
+| 17  | P9: Accountability        | Property | Price: ₹350                         |
+| 18  | Regulator Card            | Event    | Draw card                           |
+| 19  | Personal Data Breach Fine | Tax      | Deduct ₹200                         |
 
 ---
 
 ## 💰 Principle Tiles & Mechanics
 
 ### Landing on Unowned Principle Tile
+
 1. **Question Appears** — MCQ related to that principle
 2. **Correct Answer** → Option to buy at listed price OR skip
 3. **Wrong Answer** → Nothing happens, turn ends
 
 ### Landing on Opponent's Principle Tile
+
 1. **Question Appears** — Same MCQ
 2. **Correct Answer** → "Passed audit," no rent owed
 3. **Wrong Answer** → Pay rent to owner (amount depends on compliance layers)
 
 ### Landing on Own Principle Tile
+
 1. **Question Appears** — MCQ
 2. **Correct Answer** → Option to sell tile back to bank
 3. **Wrong Answer** → Rent decreases (see Dynamic Rent System)
@@ -172,11 +183,13 @@ CONSENT                                              ₹200
 ## 📊 Dynamic Rent System
 
 ### Rent Calculation
+
 - **Base Rent** — Initial rent for unimproved tile
 - **Compliance Layers** — Rent multiplies per layer (×1, ×3, ×9 for layers 1, 2, 3)
 - **Wrong Answers** — Rent decreases by 1 tier per wrong answer when landing on opponent's tile
 
 ### Rent Tiers & Decreases
+
 ```
 Tier 3 (3 layers) → Wrong answer → Tier 2 (2 layers)
 Tier 2 (2 layers) → Wrong answer → Tier 1 (1 layer)
@@ -185,6 +198,7 @@ Base rent         → Wrong answer → 0 rent
 ```
 
 ### Tile Ownership Loss
+
 - When rent reaches ₹0, tile ownership is lost
 - Tile reverts to unowned state
 - Compliance layers are removed
@@ -194,6 +208,7 @@ Base rent         → Wrong answer → 0 rent
 ## 🏗️ Compliance Layers
 
 ### Rules
+
 - **Build Only When** — Owns complete color group (all properties in that group)
 - **Maximum Layers** — 3 per tile (equivalent to 3 houses in Monopoly)
 - **Cost Per Layer** — Varies by group (₹50–₹200 per layer)
@@ -203,7 +218,9 @@ Base rent         → Wrong answer → 0 rent
   - Layer 3 → ×45 base rent
 
 ### Example
+
 If you own **P1 (₹60, base rent ₹6)** with a complete Group A:
+
 - Undeveloped: ₹6 rent
 - Layer 1: ₹30 rent
 - Layer 2: ₹90 rent
@@ -213,33 +230,36 @@ If you own **P1 (₹60, base rent ₹6)** with a complete Group A:
 
 ## 🎨 Principle Color Groups
 
-| Color | Principles | Group Name | Theme |
-|-------|-----------|-----------|-------|
-| 🟫 Saffron | P1, P5, P9 | Foundation & Accountability | Core obligations |
-| ⚪ White | P2, P6 | Transparency & Accuracy | Data integrity |
-| 🟢 Green | P3, P7 | Consent & Storage | Data lifecycle |
-| 🔵 Navy Blue | P4, P8 | Purpose & Security | Control & Protection |
+| Color        | Principles | Group Name                  | Theme                |
+| ------------ | ---------- | --------------------------- | -------------------- |
+| 🟫 Saffron   | P1, P5, P9 | Foundation & Accountability | Core obligations     |
+| ⚪ White     | P2, P6     | Transparency & Accuracy     | Data integrity       |
+| 🟢 Green     | P3, P7     | Consent & Storage           | Data lifecycle       |
+| 🔵 Navy Blue | P4, P8     | Purpose & Security          | Control & Protection |
 
 ---
 
 ## 🎴 Regulator Cards
 
 ### Overview
+
 - Similar to "Chance" / "Community Chest" in Monopoly
 - Drawn when landing on Regulator Card tiles
 - Contain DPDPA-themed events with positive/negative effects
 - NO Get Out of Jail Free cards (jail can only be exited by serving time)
 
 ### Example Cards
-| Effect | Example |
-|--------|---------|
-| Credit Bonus | "State used your data for welfare scheme. +₹100" |
-| Credit Penalty | "Personal data breach detected. -₹150" |
-| Movement | "Move to START" or "Move forward 3 tiles" |
-| Jail | "DPO flagged violation. Go to DPB Hearing" |
-| Skip Turn | "Customer files grievance. Skip next turn" |
+
+| Effect         | Example                                          |
+| -------------- | ------------------------------------------------ |
+| Credit Bonus   | "State used your data for welfare scheme. +₹100" |
+| Credit Penalty | "Personal data breach detected. -₹150"           |
+| Movement       | "Move to START" or "Move forward 3 tiles"        |
+| Jail           | "DPO flagged violation. Go to DPB Hearing"       |
+| Skip Turn      | "Customer files grievance. Skip next turn"       |
 
 ### Card Count
+
 - ~14 cards in circulation
 - Cards cycle and repeat
 
@@ -248,10 +268,12 @@ If you own **P1 (₹60, base rent ₹6)** with a complete Group A:
 ## 🚔 Jail System (DPB Hearing)
 
 ### Entering Jail
+
 - Land on "GO TO DPB HEARING" tile (tile 15), OR
 - Draw Regulator Card with jail effect
 
 ### Penalty & Restrictions
+
 - **Duration** — Skip 2 turns while in jail
 - **Cannot During Jail:**
   - Move
@@ -261,9 +283,11 @@ If you own **P1 (₹60, base rent ₹6)** with a complete Group A:
 - **Rent Collection** — Cannot collect rent on owned properties while in jail
 
 ### Exit Option
+
 - **ONLY WAY TO EXIT:** Complete 2 turns in jail, then automatically released
 
 ### Strategic Value
+
 - Staying in jail is sometimes beneficial (protects from bad tiles / regulator cards)
 - Players must decide if being trapped is worth the protection
 - Adds risk/reward gameplay element
@@ -273,15 +297,18 @@ If you own **P1 (₹60, base rent ₹6)** with a complete Group A:
 ## 🏦 Player Elimination
 
 ### Elimination Condition
+
 - Player loses all credits and all properties (cannot meet obligations)
 - Eliminated player becomes observer/spectator only
 
 ### Leaving Game Voluntarily
+
 - Treated as voluntary elimination
 - Assets distributed according to debts
 - Cannot rejoin mid-game
 
 ### Winner
+
 - Last remaining active player wins the game
 
 ---
@@ -289,6 +316,7 @@ If you own **P1 (₹60, base rent ₹6)** with a complete Group A:
 ## 🎮 Controls
 
 ### Player Actions
+
 - **Roll Dice** — Initiate movement phase
 - **Leave Game** — Voluntarily exit (counts as elimination)
 - **Manage Properties:**
@@ -299,6 +327,7 @@ If you own **P1 (₹60, base rent ₹6)** with a complete Group A:
 - **Answer Questions** — Submit MCQ answer when prompted
 
 ### UI Layout
+
 - Dice roll button (prominent, center-bottom)
 - Property management panel (right sidebar)
 - Player status panel (left sidebar)
@@ -309,11 +338,13 @@ If you own **P1 (₹60, base rent ₹6)** with a complete Group A:
 ## 🎲 Dice & Movement
 
 ### Mechanics
+
 - **Single Dice** — Roll once per turn (d6)
 - **Movement** — Move token by rolled amount (0–20 tiles, wrapping)
 - **Passing START** — Collect ₹200 when position exceeds 19
 
 ### Animation
+
 - Dice roll animated (0.5s)
 - Token smooth movement (200ms per tile)
 - No double-rolls (simplification from classic Monopoly)
@@ -323,6 +354,7 @@ If you own **P1 (₹60, base rent ₹6)** with a complete Group A:
 ## ✨ Animations & Polish
 
 ### Priority Animations
+
 1. **Dice Roll** — Roll animation (0.5s) + result display
 2. **Token Movement** — Smooth glide across tiles (200ms per tile)
 3. **Card Flip** — Regulator card reveal (0.4s)
@@ -330,6 +362,7 @@ If you own **P1 (₹60, base rent ₹6)** with a complete Group A:
 5. **Credit Changes** — Floating number effects (±₹X feedback)
 
 ### Performance
+
 - All animations on GPU (CSS transforms)
 - Fallback for low-end devices
 - Option to disable animations (settings)
@@ -339,18 +372,21 @@ If you own **P1 (₹60, base rent ₹6)** with a complete Group A:
 ## 🌐 Multiplayer with Lovable Cloud
 
 ### Architecture
+
 - **Frontend** → **Lovable Cloud (Supabase)** → **Postgres Database**
 - **Real-time Sync** — Supabase Realtime channels (WebSocket)
 - **Presence Tracking** — Supabase Presence API (who's online)
 - **Auth** — Supabase Auth (email, Google OAuth optional)
 
 ### Key Lovable Cloud Services
+
 1. **Supabase Auth** — User sign-in/sign-up
 2. **Postgres Database** — Game state, player data, room data
 3. **Realtime** — Live game synchronization across players
 4. **Edge Functions** — Optional server-side logic (MCQ validation, anti-cheat)
 
 ### Room System
+
 ```sql
 rooms:
   - room_id (unique)
@@ -379,6 +415,7 @@ room_players:
 ### Core Tables
 
 #### `users`
+
 ```sql
 id UUID PRIMARY KEY
 email VARCHAR(255) UNIQUE
@@ -386,6 +423,7 @@ created_at TIMESTAMP
 ```
 
 #### `rooms`
+
 ```sql
 id UUID PRIMARY KEY
 host_id UUID (FK: users.id)
@@ -395,6 +433,7 @@ updated_at TIMESTAMP
 ```
 
 #### `room_players`
+
 ```sql
 id UUID PRIMARY KEY
 room_id UUID (FK: rooms.id)
@@ -411,6 +450,7 @@ created_at TIMESTAMP
 ```
 
 #### `board_tiles`
+
 ```sql
 id INT PRIMARY KEY
 tile_index INT (0–19)
@@ -423,6 +463,7 @@ data JSONB (flexible)
 ```
 
 #### `principles`
+
 ```sql
 id INT PRIMARY KEY
 tile_index INT (0–19)
@@ -439,6 +480,7 @@ description TEXT
 ```
 
 #### `regulator_cards`
+
 ```sql
 id UUID PRIMARY KEY
 card_text TEXT
@@ -447,6 +489,7 @@ effect_data JSONB
 ```
 
 #### `questions`
+
 ```sql
 id UUID PRIMARY KEY
 principle_no INT (1–9)
@@ -460,6 +503,7 @@ category VARCHAR (general, banking_insurance)
 ```
 
 #### `game_events` (optional, for analytics/logging)
+
 ```sql
 id UUID PRIMARY KEY
 room_id UUID
@@ -474,6 +518,7 @@ created_at TIMESTAMP
 ## 🔄 Game Flow
 
 ### Phase Sequence
+
 ```
 Landing Page
     ↓
@@ -499,6 +544,7 @@ Results Screen → Option to Play Again or Return to Lobby
 ```
 
 ### Core Game Loop (Per Turn)
+
 ```
 1. ROLL PHASE
    → Player clicks "Roll Dice"
@@ -531,10 +577,12 @@ Results Screen → Option to Play Again or Return to Lobby
 ## 🏆 Win Condition
 
 ### Victory
+
 - **Last active player** (not eliminated) wins the game
 - Game ends when all but one player are eliminated
 
 ### Results Screen
+
 - Display final standings
 - Show final credit balances
 - Offer "Play Again" or "Return to Lobby"
@@ -545,7 +593,8 @@ Results Screen → Option to Play Again or Return to Lobby
 ## 📱 UX Requirements
 
 ### Mobile Responsiveness
-- **Breakpoints:** 
+
+- **Breakpoints:**
   - Mobile: < 768px
   - Tablet: 768px – 1024px
   - Desktop: > 1024px
@@ -554,17 +603,20 @@ Results Screen → Option to Play Again or Return to Lobby
 - **Orientation:** Portrait on mobile, landscape optional
 
 ### Performance
+
 - Page load < 3s
 - Dice animation smooth (60 FPS)
 - Real-time updates < 500ms latency
 - Lovable Cloud Realtime ensures instant sync
 
 ### Social Sharing
+
 - **WhatsApp Share Button** — Room invite link
 - **Copy Room ID** — Easy clipboard copy
 - **Deep Linking** — Link directly to join room (if supported)
 
 ### Accessibility
+
 - Alt text on avatars
 - Keyboard navigation
 - Color contrast (WCAG AA)
@@ -575,6 +627,7 @@ Results Screen → Option to Play Again or Return to Lobby
 ## 🛠️ Tech Stack
 
 ### Frontend
+
 - **Framework:** React 18 + TypeScript
 - **Build Tool:** Vite
 - **Styling:** Tailwind CSS
@@ -583,6 +636,7 @@ Results Screen → Option to Play Again or Return to Lobby
 - **Animations:** CSS + React Spring (optional)
 
 ### Backend (Lovable Cloud)
+
 - **Platform:** Lovable Cloud (Supabase)
 - **Database:** PostgreSQL
 - **Authentication:** Supabase Auth (email, OAuth)
@@ -591,6 +645,7 @@ Results Screen → Option to Play Again or Return to Lobby
 - **Storage:** Supabase Storage (for avatar images, if needed)
 
 ### Deployment
+
 - **Frontend Hosting:** Vercel / Netlify / GitHub Pages
 - **Backend Hosting:** Lovable Cloud (Supabase managed service)
 - **CI/CD:** GitHub Actions
@@ -600,6 +655,7 @@ Results Screen → Option to Play Again or Return to Lobby
 ## 🚀 Implementation Roadmap
 
 ### Phase 1: MVP (Core Game)
+
 - [ ] Landing page + Auth (Lovable Cloud)
 - [ ] Lobby system (solo + multiplayer modes)
 - [ ] Avatar selection
@@ -610,6 +666,7 @@ Results Screen → Option to Play Again or Return to Lobby
 - [ ] Player elimination check
 
 ### Phase 2: Gameplay Mechanics
+
 - [ ] MCQ system (questions database)
 - [ ] Ownership + buying mechanics
 - [ ] Rent calculation + payment
@@ -618,6 +675,7 @@ Results Screen → Option to Play Again or Return to Lobby
 - [ ] Regulator cards
 
 ### Phase 3: Advanced Features
+
 - [ ] Jail system (DPB Hearing)
 - [ ] Property trading (peer-to-peer)
 - [ ] Game history / analytics
@@ -625,6 +683,7 @@ Results Screen → Option to Play Again or Return to Lobby
 - [ ] Sound effects (Howler.js)
 
 ### Phase 4: Polish & Optimization
+
 - [ ] Mobile optimization
 - [ ] Animation tuning
 - [ ] Performance profiling
@@ -668,6 +727,6 @@ Results Screen → Option to Play Again or Return to Lobby
 
 ---
 
-*This document is the complete implementation brief. Builders should be able to create the MVP from this specification without additional design input, except for the open questions above and visual/brand polish decisions.*
+_This document is the complete implementation brief. Builders should be able to create the MVP from this specification without additional design input, except for the open questions above and visual/brand polish decisions._
 
-*Questions? Refer to Lovable Cloud (Supabase) documentation at https://supabase.com/docs for backend implementation.*
+_Questions? Refer to Lovable Cloud (Supabase) documentation at https://supabase.com/docs for backend implementation._
