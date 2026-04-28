@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import type { BoardTile } from "@/lib/game/constants";
 import { AVATARS, GROUP_COLORS, PRINCIPLES } from "@/lib/game/constants";
 import type { Player } from "@/lib/game/engine-types";
@@ -23,16 +25,45 @@ export function GameBoard({
   propertyOwners,
   centerContent,
 }: Props) {
-  // Map tile index → grid position. 5x5 perimeter starting bottom-left, going anticlockwise.
+  // Map tile index → grid position. 5x5 perimeter starting bottom-left, going anti-clockwise.
   const positions: Record<number, { col: number; row: number }> = {};
-  // Left column bottom->top: indices 0..4 -> col 1, row 5..1
-  for (let i = 0; i <= 4; i++) positions[i] = { col: 1, row: 5 - i };
-  // Top row (excluding top-left): indices 5..8 -> col 2..5, row 1
-  for (let i = 5; i <= 8; i++) positions[i] = { col: i - 3, row: 1 };
-  // Right column top->bottom (excluding corners): indices 9..11 -> col 5, row 2..4
-  for (let i = 9; i <= 11; i++) positions[i] = { col: 5, row: i - 7 };
-  // Bottom row right->left (including bottom-right, excluding bottom-left): indices 12..15 -> col 5..2, row 5
-  for (let i = 12; i <= 15; i++) positions[i] = { col: 17 - i, row: 5 };
+  // Bottom row (left->right): indices 0..4 -> col 1..5, row 5
+  for (let i = 0; i <= 4; i++) positions[i] = { col: i + 1, row: 5 };
+  // Right column (bottom->top, excluding corners): indices 5..8 -> col 5, row 4..1
+  for (let i = 5; i <= 8; i++) positions[i] = { col: 5, row: 9 - i };
+  // Top row (right->left, excluding top-right): indices 9..12 -> col 4..1, row 1
+  for (let i = 9; i <= 12; i++) positions[i] = { col: 13 - i, row: 1 };
+  // Left column (top->bottom, excluding corners): indices 13..15 -> col 1, row 2..4
+  for (let i = 13; i <= 15; i++) positions[i] = { col: 1, row: i - 11 };
+
+  // Track visual positions for smooth tile-by-tile hopping
+  const [visualPositions, setVisualPositions] = useState<Record<string, number>>(() => {
+    const init: Record<string, number> = {};
+    players.forEach((p) => {
+      init[p.id] = p.position;
+    });
+    return init;
+  });
+
+  useEffect(() => {
+    const timeouts: NodeJS.Timeout[] = [];
+    players.forEach((p) => {
+      if (p.isEliminated) return;
+      const vPos = visualPositions[p.id] ?? p.position;
+      if (vPos !== p.position) {
+        // Step towards logical position +1 at a time (wrap around at 16)
+        timeouts.push(
+          setTimeout(() => {
+            setVisualPositions((prev) => ({
+              ...prev,
+              [p.id]: (prev[p.id] + 1) % 16,
+            }));
+          }, 200) // 200ms per tile hop
+        );
+      }
+    });
+    return () => timeouts.forEach(clearTimeout);
+  }, [players, visualPositions]);
 
   return (
     <div className="relative aspect-square w-full max-w-[720px]">
@@ -96,26 +127,41 @@ export function GameBoard({
                   style={{ background: AVATARS[ownerPlayer.avatarId % AVATARS.length].color }}
                 />
               )}
-              {/* Player tokens centered and larger */}
-              <div className="absolute inset-0 flex items-center justify-center gap-1">
-                {players
-                  .filter((p) => !p.isEliminated && p.position === tile.index)
-                  .map((p) => (
-                    <span
-                      key={p.id}
-                      className={`flex h-6 w-6 items-center justify-center rounded-full text-sm ring-1 ring-card ${
-                        p.id === currentPlayerId ? "ring-2 ring-primary" : ""
-                      }`}
-                      style={{
-                        background: AVATARS[p.avatarId % AVATARS.length].color,
-                        color: "white",
-                      }}
-                      title={p.name}
-                    >
-                      {AVATARS[p.avatarId % AVATARS.length].emoji}
-                    </span>
-                  ))}
-              </div>
+            </div>
+          );
+        })}
+
+        {/* Token Animation Layer */}
+        {tiles.map((tile) => {
+          const pos = positions[tile.index];
+          const occupants = players.filter(
+            (p) => !p.isEliminated && (visualPositions[p.id] ?? p.position) === tile.index
+          );
+
+          return (
+            <div
+              key={`token-layer-${tile.index}`}
+              style={{ gridColumn: pos.col, gridRow: pos.row }}
+              className="pointer-events-none z-10 flex items-center justify-center gap-1 p-1"
+            >
+              {occupants.map((p) => (
+                <motion.span
+                  key={p.id}
+                  layoutId={`token-${p.id}`}
+                  initial={false}
+                  transition={{ type: "spring", stiffness: 350, damping: 30 }}
+                  className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-sm ring-1 ring-card ${
+                    p.id === currentPlayerId ? "ring-2 ring-primary" : ""
+                  }`}
+                  style={{
+                    background: AVATARS[p.avatarId % AVATARS.length].color,
+                    color: "white",
+                  }}
+                  title={p.name}
+                >
+                  {AVATARS[p.avatarId % AVATARS.length].emoji}
+                </motion.span>
+              ))}
             </div>
           );
         })}

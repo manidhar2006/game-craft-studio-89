@@ -623,10 +623,12 @@ export function useSoloGame({
         });
         return { ...s, players, phase: "moving" };
       });
+      // Delay settling until the visual animation hopping finishes
+      const delay = Math.max(600, steps * 200 + 300);
       setTimeout(() => {
         const cur = stateRef.current?.players.find((p) => p.id === playerId);
         if (cur) settleLanding(cur);
-      }, 600);
+      }, delay);
     },
     [settleLanding],
   );

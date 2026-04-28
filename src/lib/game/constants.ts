@@ -1,10 +1,10 @@
 export const PRINCIPLES: PrincipleConfig[] = [
   {
     principleNo: 1,
-    tileIndex: 15,
+    tileIndex: 1,
     name: "Notice & Transparency",
     shortName: "Notice",
-    group: "white",
+    group: "saffron",
     price: 80,
     baseRent: 8,
     layer1Rent: 40,
@@ -15,10 +15,10 @@ export const PRINCIPLES: PrincipleConfig[] = [
   },
   {
     principleNo: 2,
-    tileIndex: 1,
+    tileIndex: 3,
     name: "Lawful Processing",
     shortName: "Lawful Processing",
-    group: "saffron",
+    group: "white",
     price: 60,
     baseRent: 6,
     layer1Rent: 30,
@@ -29,7 +29,7 @@ export const PRINCIPLES: PrincipleConfig[] = [
   },
   {
     principleNo: 3,
-    tileIndex: 2,
+    tileIndex: 5,
     name: "Consent",
     shortName: "Consent",
     group: "green",
@@ -43,7 +43,7 @@ export const PRINCIPLES: PrincipleConfig[] = [
   },
   {
     principleNo: 4,
-    tileIndex: 6,
+    tileIndex: 7,
     name: "Purpose Limitation",
     shortName: "Purpose",
     group: "navy",
@@ -57,7 +57,7 @@ export const PRINCIPLES: PrincipleConfig[] = [
   },
   {
     principleNo: 5,
-    tileIndex: 7,
+    tileIndex: 9,
     name: "Data Minimization",
     shortName: "Minimization",
     group: "saffron",
@@ -71,7 +71,7 @@ export const PRINCIPLES: PrincipleConfig[] = [
   },
   {
     principleNo: 6,
-    tileIndex: 9,
+    tileIndex: 11,
     name: "Data Accuracy",
     shortName: "Accuracy",
     group: "white",
@@ -85,7 +85,7 @@ export const PRINCIPLES: PrincipleConfig[] = [
   },
   {
     principleNo: 7,
-    tileIndex: 10,
+    tileIndex: 13,
     name: "Storage Limitation",
     shortName: "Storage",
     group: "green",
@@ -99,7 +99,7 @@ export const PRINCIPLES: PrincipleConfig[] = [
   },
   {
     principleNo: 8,
-    tileIndex: 11,
+    tileIndex: 14,
     name: "Security & Integrity",
     shortName: "Security",
     group: "navy",
@@ -113,7 +113,7 @@ export const PRINCIPLES: PrincipleConfig[] = [
   },
   {
     principleNo: 9,
-    tileIndex: 14,
+    tileIndex: 15,
     name: "Accountability",
     shortName: "Accountability",
     group: "saffron",
@@ -135,7 +135,7 @@ export const BOARD_TILES: BoardTile[] = (() => {
   for (let i = 0; i < 16; i++) {
     if (i === 0) {
       tiles.push({ index: 0, type: "start", name: "START", subtitle: "Collect ₹200" });
-    } else if ([1, 2, 6, 7, 9, 10, 11, 14, 15].includes(i)) {
+    } else if ([1, 3, 5, 7, 9, 11, 13, 14, 15].includes(i)) {
       const p = principleByTile.get(i);
       if (p)
         tiles.push({
@@ -148,22 +148,16 @@ export const BOARD_TILES: BoardTile[] = (() => {
         });
       else
         tiles.push({ index: i, type: "regulator", name: "Regulator Card", subtitle: "Draw event" });
-    } else if (i === 3 || i === 13) {
+    } else if (i === 2 || i === 10) {
       tiles.push({ index: i, type: "regulator", name: "Regulator Card", subtitle: "Draw event" });
     } else if (i === 4) {
       tiles.push({ index: i, type: "jail_visit", name: "DPB HEARING", subtitle: "Just visiting" });
-    } else if (i === 5) {
-      tiles.push({
-        index: i,
-        type: "tax",
-        name: "Compliance Penalty",
-        subtitle: "−₹100",
-        amount: 100,
-      });
+    } else if (i === 6) {
+      tiles.push({ index: i, type: "tax", name: "Data Breach 2", subtitle: "−₹100", amount: 100 });
     } else if (i === 8) {
-      tiles.push({ index: i, type: "go_to_jail", name: "GO TO HEARING", subtitle: "Skip 2 turns" });
+      tiles.push({ index: i, type: "tax", name: "Data Breach 1", subtitle: "−₹200", amount: 200 });
     } else if (i === 12) {
-      tiles.push({ index: i, type: "tax", name: "Breach Fine", subtitle: "−₹200", amount: 200 });
+      tiles.push({ index: i, type: "go_to_jail", name: "GO TO HEARING", subtitle: "Skip 2 turns" });
     } else {
       tiles.push({ index: i, type: "regulator", name: "Regulator Card", subtitle: "Draw event" });
     }

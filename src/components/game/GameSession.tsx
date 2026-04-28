@@ -517,7 +517,10 @@ export function GameSession({ roomId }: Props) {
             {currentPlayer ? `${currentPlayer.name}'s turn` : "Waiting for turn state…"}
           </div>
         </div>
-        <Button size="sm" variant="ghost" onClick={game.leaveGame}>
+        <Button size="sm" variant="ghost" onClick={() => {
+          game.leaveGame();
+          navigate({ to: "/" });
+        }}>
           Leave
         </Button>
       </header>
@@ -587,7 +590,7 @@ export function GameSession({ roomId }: Props) {
                           : "Answer correctly to strengthen the tile."}
                     </div>
                   </div>
-                  <div className="rounded-2xl border border-border/60 bg-secondary/50 p-4 text-sm leading-relaxed">
+                  <div className="max-h-48 overflow-y-auto rounded-2xl border border-border/60 bg-secondary/50 p-4 text-sm leading-relaxed">
                     {activeMcq.question.text}
                   </div>
                   <div className="grid gap-2">
@@ -595,12 +598,12 @@ export function GameSession({ roomId }: Props) {
                       <Button
                         key={option.key}
                         variant="secondary"
-                        className="justify-start rounded-xl border border-border/60 bg-background px-3 py-6 text-left whitespace-normal break-words"
+                        className="h-auto min-h-[3rem] justify-start rounded-xl border border-border/60 bg-background px-3 py-3 text-left whitespace-normal break-words"
                         onClick={() => game.answerMcq(option.key)}
                         disabled={!isMyTurn}
                       >
-                        <span className="mr-2 font-semibold">{option.key}.</span>
-                        <span>{option.text}</span>
+                        <span className="mr-2 font-semibold shrink-0">{option.key}.</span>
+                        <span className="leading-snug">{option.text}</span>
                       </Button>
                     ))}
                   </div>

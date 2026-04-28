@@ -35,7 +35,7 @@
 ### What Stayed?
 
 - ✅ 9 DPDPA Principles as properties (color groups A, B, C, D)
-- ✅ 20-tile board with corners: START, FREE AUDIT, DPB HEARING, GO TO DPB HEARING
+- ✅ 16-tile board with corners: START, DATA BREACH, DPB HEARING, GO TO DPB HEARING
 - ✅ Regulator Cards (like Chance cards)
 - ✅ Compliance Layers (like houses; max 3)
 - ✅ Jail System (DPB Hearing) with strategic importance
@@ -107,12 +107,13 @@ Landing → (Auth if not logged in) → Lobby
 
 ## 🎯 Board Design
 
-    there should 16 tiles
-    9 principle tiles
-    1 start
-    2 Data Breach Cards
-    2 DPB and go to DPB 
-    2 Regulator Cards
+- **Total:** 16 tiles
+- **9 Principle Tiles** (Properties)
+- **1 START Tile**
+- **2 Data Breach Tiles**
+- **1 DPB Hearing Tile** (Jail)
+- **1 GO TO DPB HEARING Tile**
+- **2 Regulator Cards Tiles**
 
 ## 💰 Principle Tiles & Mechanics
 
@@ -296,8 +297,8 @@ If you own **P1 (₹60, base rent ₹6)** with a complete Group A:
 ### Mechanics
 
 - **Single Dice** — Roll once per turn (d6)
-- **Movement** — Move token by rolled amount (0–20 tiles, wrapping)
-- **Passing START** — Collect ₹200 when position exceeds 19
+- **Movement** — Move token by rolled amount (wrapping around 16 tiles)
+- **Passing START** — Collect ₹200 when position wraps past 15
 
 ### Animation
 
@@ -355,7 +356,7 @@ room_players:
   - room_id
   - player_id
   - avatar_id
-  - position (tile index 0–19)
+  - position (tile index 0–15)
   - credits (current balance)
   - properties (owned principle tiles)
   - compliance_layers (per tile)
@@ -395,7 +396,7 @@ id UUID PRIMARY KEY
 room_id UUID (FK: rooms.id)
 player_id UUID (FK: users.id)
 avatar_id INT (0–7)
-position INT (0–19)
+position INT (0–15)
 credits INT
 properties JSONB (array of owned tile indices)
 compliance_layers JSONB (map: tile_id -> layer_count)
@@ -409,7 +410,7 @@ created_at TIMESTAMP
 
 ```sql
 id INT PRIMARY KEY
-tile_index INT (0–19)
+tile_index INT (0–15)
 tile_type VARCHAR (property, tax, corner, event, etc.)
 display_name VARCHAR
 color_group VARCHAR (A, B, C, D or null)
@@ -422,7 +423,7 @@ data JSONB (flexible)
 
 ```sql
 id INT PRIMARY KEY
-tile_index INT (0–19)
+tile_index INT (0–15)
 principle_no INT (1–9)
 name VARCHAR
 color_group VARCHAR
@@ -662,7 +663,7 @@ Results Screen → Option to Play Again or Return to Lobby
 
 ## 📚 Glossary
 
-- **Tile / District** — A position on the board (0–19)
+- **Tile / District** — A position on the board (0–15)
 - **Principle** — One of the 9 DPDPA principles (property tile)
 - **Compliance Layer** — Equivalent to houses; max 3 per tile; multiplies rent
 - **Regulator Card** — Chance/Community Chest equivalent; random DPDPA-themed event
