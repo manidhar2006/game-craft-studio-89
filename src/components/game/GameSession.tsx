@@ -56,8 +56,17 @@ export function GameSession({ roomId }: Props) {
       .select("display_name, avatar_id")
       .eq("id", user.id)
       .maybeSingle()
-      .then(({ data }) => {
-        if (data) setProfile({ display_name: data.display_name, avatar_id: data.avatar_id ?? 0 });
+      .then(({ data, error }) => {
+        if (error) {
+          console.error("Profile fetch error:", error);
+        }
+        if (data) {
+          setProfile({ display_name: data.display_name, avatar_id: data.avatar_id ?? 0 });
+        } else {
+          // No profile row exists — use a sensible fallback so the UI doesn't get stuck
+          const fallbackName = user.email?.split("@")[0] ?? "Player";
+          setProfile({ display_name: fallbackName, avatar_id: 0 });
+        }
       });
   }, [user]);
 

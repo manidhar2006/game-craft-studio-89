@@ -107,56 +107,12 @@ Landing → (Auth if not logged in) → Lobby
 
 ## 🎯 Board Design
 
-### Layout — 20 Tiles, 5 per Side
-
-```
-        [ 10 ]  [ 11 ]  [ 12 ]  [ 13 ]  [ 14 ]  [ 15 ]
-        DPB     P6      P7      Reg     P8      GO TO
-        VISIT   ACCURACY STORAGE  CARD    SECURITY DPB
-[  9  ]                                              [ 16 ]
-P5                                                   PENALTY
-MINIMIZ                                              ₹150
-[  8  ]               BOARD CENTER                   [ 17 ]
-Reg                  (player panels,                 P9
-CARD                  game log, dice)                ACCOUNT
-[  7  ]                                              [ 18 ]
-P4                                                   Reg
-PURPOSE                                              CARD
-[  6  ]                                              [ 19 ]
-P3                                                   PENALTY
-CONSENT                                              ₹200
-        [  5  ] [  4  ] [  3  ] [  2  ] [  1  ] [  0  ]
-        FREE    P2      Reg     P1      Reg     START
-        AUDIT   NOTICE  CARD    LAWFUL  CARD    ₹200
-                                PROC
-```
-
-### Tile Inventory
-
-| #   | Tile Name                 | Type     | Details                             |
-| --- | ------------------------- | -------- | ----------------------------------- |
-| 0   | START                     | Corner   | Pass = collect ₹200                 |
-| 1   | P1: Lawful Processing     | Property | Price: ₹60                          |
-| 2   | Regulator Card            | Event    | Draw card                           |
-| 3   | P2: Notice & Transparency | Property | Price: ₹80                          |
-| 4   | Compliance Penalty        | Tax      | Deduct ₹100                         |
-| 5   | FREE AUDIT                | Corner   | Collect accumulated penalty pot     |
-| 6   | P3: Consent               | Property | Price: ₹140                         |
-| 7   | P4: Purpose Limitation    | Property | Price: ₹140                         |
-| 8   | Regulator Card            | Event    | Draw card                           |
-| 9   | P5: Data Minimization     | Property | Price: ₹160                         |
-| 10  | DPB HEARING               | Corner   | Just visiting OR serving jail turns |
-| 11  | P6: Data Accuracy         | Property | Price: ₹220                         |
-| 12  | P7: Storage Limitation    | Property | Price: ₹240                         |
-| 13  | Regulator Card            | Event    | Draw card                           |
-| 14  | P8: Security & Integrity  | Property | Price: ₹300                         |
-| 15  | GO TO DPB HEARING         | Corner   | Send to jail (tile 10)              |
-| 16  | Compliance Penalty        | Tax      | Deduct ₹150                         |
-| 17  | P9: Accountability        | Property | Price: ₹350                         |
-| 18  | Regulator Card            | Event    | Draw card                           |
-| 19  | Personal Data Breach Fine | Tax      | Deduct ₹200                         |
-
----
+    there should 16 tiles
+    9 principle tiles
+    1 start
+    2 Data Breach Cards
+    2 DPB and go to DPB 
+    2 Regulator Cards
 
 ## 💰 Principle Tiles & Mechanics
 
