@@ -9,12 +9,18 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as PlayRouteImport } from './routes/play'
 import { Route as LobbyRouteImport } from './routes/lobby'
 import { Route as HowItWorksRouteImport } from './routes/how-it-works'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as GameRoomIdRouteImport } from './routes/game.$roomId'
 
+const PlayRoute = PlayRouteImport.update({
+  id: '/play',
+  path: '/play',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LobbyRoute = LobbyRouteImport.update({
   id: '/lobby',
   path: '/lobby',
@@ -46,6 +52,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/how-it-works': typeof HowItWorksRoute
   '/lobby': typeof LobbyRoute
+  '/play': typeof PlayRoute
   '/game/$roomId': typeof GameRoomIdRoute
 }
 export interface FileRoutesByTo {
@@ -53,6 +60,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/how-it-works': typeof HowItWorksRoute
   '/lobby': typeof LobbyRoute
+  '/play': typeof PlayRoute
   '/game/$roomId': typeof GameRoomIdRoute
 }
 export interface FileRoutesById {
@@ -61,14 +69,28 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/how-it-works': typeof HowItWorksRoute
   '/lobby': typeof LobbyRoute
+  '/play': typeof PlayRoute
   '/game/$roomId': typeof GameRoomIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/how-it-works' | '/lobby' | '/game/$roomId'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/how-it-works'
+    | '/lobby'
+    | '/play'
+    | '/game/$roomId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/how-it-works' | '/lobby' | '/game/$roomId'
-  id: '__root__' | '/' | '/auth' | '/how-it-works' | '/lobby' | '/game/$roomId'
+  to: '/' | '/auth' | '/how-it-works' | '/lobby' | '/play' | '/game/$roomId'
+  id:
+    | '__root__'
+    | '/'
+    | '/auth'
+    | '/how-it-works'
+    | '/lobby'
+    | '/play'
+    | '/game/$roomId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -76,11 +98,19 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   HowItWorksRoute: typeof HowItWorksRoute
   LobbyRoute: typeof LobbyRoute
+  PlayRoute: typeof PlayRoute
   GameRoomIdRoute: typeof GameRoomIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/play': {
+      id: '/play'
+      path: '/play'
+      fullPath: '/play'
+      preLoaderRoute: typeof PlayRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/lobby': {
       id: '/lobby'
       path: '/lobby'
@@ -124,6 +154,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   HowItWorksRoute: HowItWorksRoute,
   LobbyRoute: LobbyRoute,
+  PlayRoute: PlayRoute,
   GameRoomIdRoute: GameRoomIdRoute,
 }
 export const routeTree = rootRouteImport

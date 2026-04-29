@@ -15,7 +15,7 @@ export const Route = createFileRoute("/how-it-works")({
   component: HowItWorks,
   head: () => ({
     meta: [
-      { title: "How DPDPA Tycoon works" },
+      { title: "How Data Viz works" },
       {
         name: "description",
         content:

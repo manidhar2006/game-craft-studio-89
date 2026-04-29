@@ -27,13 +27,9 @@ export const Route = createFileRoute("/lobby")({
 });
 
 function LobbyPage() {
-  const { user, signOut, loading } = useAuth();
+  const { user, isAnonymous, signOut, ensureSession } = useAuth();
   const navigate = useNavigate();
-  useEffect(() => {
-    if (!loading && !user) navigate({ to: "/auth", search: { mode: "signin" } });
-  }, [user, loading, navigate]);
   const [displayName, setDisplayName] = useState("");
-  const [avatarId, setAvatarId] = useState<number>(0);
   const [joinCode, setJoinCode] = useState("");
   const [creating, setCreating] = useState(false);
   const [joining, setJoining] = useState(false);
@@ -42,6 +38,11 @@ function LobbyPage() {
 
   useEffect(() => {
     if (!user) return;
+    if (user.is_anonymous) {
+      const stored = typeof window !== "undefined" ? window.localStorage.getItem("dataviz:displayName") : null;
+      if (stored) setDisplayName(stored);
+      return;
+    }
     (async () => {
       const { data } = await supabase
         .from("profiles")
@@ -50,17 +51,25 @@ function LobbyPage() {
         .maybeSingle();
       if (data) {
         setDisplayName(data.display_name ?? "");
-        setAvatarId(data.avatar_id ?? 0);
       } else {
         setDisplayName(user.email?.split("@")[0] ?? "Player");
       }
     })();
   }, [user]);
 
+  useEffect(() => {
+    if (typeof window === "undefined" || !displayName) return;
+    window.localStorage.setItem("dataviz:displayName", displayName);
+  }, [displayName]);
+
   async function createRoom(maxPlayers: 2 | 3 | 4) {
-    if (!user) return;
+    if (!displayName.trim()) {
+      toast.error("Pick a display name first.");
+      return;
+    }
     setCreating(true);
     try {
+      const sessionUser = await ensureSession();
       const code = generateRoomCode();
       let room: { id: string } | null = null;
       let error: unknown = null;
@@ -69,7 +78,7 @@ function LobbyPage() {
       for (let attempt = 0; attempt < 3; attempt += 1) {
         const result = await supabase
           .from("rooms")
-          .insert({ code, host_id: user.id, status: "waiting", max_players: maxPlayers })
+          .insert({ code, host_id: sessionUser.id, status: "waiting", max_players: maxPlayers })
           .select("id")
           .single();
         room = result.data as { id: string } | null;
@@ -91,7 +100,7 @@ function LobbyPage() {
       // add player without avatar; avatar selection happens inside the room
       const { error: rpError } = await supabase.from("room_players").insert({
         room_id: room.id,
-        player_id: user.id,
+        player_id: sessionUser.id,
         display_name: displayName,
         avatar_id: null,
         seat_order: 0,
@@ -114,78 +123,93 @@ function LobbyPage() {
   }
 
   async function joinRoom() {
-    if (!user || !joinCode.trim()) return;
+    if (!joinCode.trim()) return;
+    if (!displayName.trim()) {
+      toast.error("Pick a display name first.");
+      return;
+    }
     setJoining(true);
-    const code = joinCode.trim().toUpperCase();
-    const { data: room, error: roomError } = await supabase
-      .from("rooms")
-      .select("id, max_players, status")
-      .eq("code", code)
-      .maybeSingle();
-    if (roomError) {
-      console.error("Supabase room lookup error:", roomError);
-      toast.error("Could not find that room. Please try again.");
-      setJoining(false);
-      return;
-    }
-    if (!room) {
-      toast.error("Room not found");
-      setJoining(false);
-      return;
-    }
-    if (room.status !== "waiting") {
-      toast.error("That room has already started.");
-      setJoining(false);
-      return;
-    }
+    try {
+      const sessionUser = await ensureSession();
+      const code = joinCode.trim().toUpperCase();
+      const { data: room, error: roomError } = await supabase
+        .from("rooms")
+        .select("id, max_players, status")
+        .eq("code", code)
+        .maybeSingle();
+      if (roomError) {
+        console.error("Supabase room lookup error:", roomError);
+        toast.error("Could not find that room. Please try again.");
+        setJoining(false);
+        return;
+      }
+      if (!room) {
+        toast.error("Room not found");
+        setJoining(false);
+        return;
+      }
+      if (room.status !== "waiting") {
+        toast.error("That room has already started.");
+        setJoining(false);
+        return;
+      }
 
-    const { error: joinError } = await supabase.from("room_players").upsert(
-      {
-        room_id: room.id,
-        player_id: user.id,
-        display_name: displayName,
-        avatar_id: null,
-        seat_order: 999,
-      },
-      { onConflict: "room_id,player_id" },
-    );
-    if (joinError) {
-      console.error("Supabase room_players upsert error:", joinError);
+      const { error: joinError } = await supabase.from("room_players").upsert(
+        {
+          room_id: room.id,
+          player_id: sessionUser.id,
+          display_name: displayName,
+          avatar_id: null,
+          seat_order: 999,
+        },
+        { onConflict: "room_id,player_id" },
+      );
+      if (joinError) {
+        console.error("Supabase room_players upsert error:", joinError);
+        toast.error("Could not join the room. Please try again.");
+        setJoining(false);
+        return;
+      }
+
+      const { data: players, error: playersError } = await supabase
+        .from("room_players")
+        .select("player_id, seat_order")
+        .eq("room_id", room.id);
+      if (playersError) {
+        console.error("Supabase room_players lookup error:", playersError);
+      }
+
+      const maxPlayers = room.max_players ?? MAX_PLAYERS;
+      if ((players?.length ?? 0) > maxPlayers) {
+        await supabase
+          .from("room_players")
+          .delete()
+          .eq("room_id", room.id)
+          .eq("player_id", sessionUser.id);
+        toast.error("Room is full");
+        setJoining(false);
+        return;
+      }
+
+      if (players) {
+        const usedSeats = new Set(
+          players.filter((p) => p.player_id !== sessionUser.id).map((p) => p.seat_order),
+        );
+        let nextSeat = 0;
+        while (usedSeats.has(nextSeat)) nextSeat += 1;
+        await supabase
+          .from("room_players")
+          .update({ seat_order: nextSeat })
+          .eq("room_id", room.id)
+          .eq("player_id", sessionUser.id);
+      }
+      setJoining(false);
+      navigate({ to: "/game/$roomId", params: { roomId: room.id } });
+    } catch (err) {
+      console.error("Join room failed:", err);
       toast.error("Could not join the room. Please try again.");
       setJoining(false);
-      return;
     }
-
-    const { data: players, error: playersError } = await supabase
-      .from("room_players")
-      .select("player_id, seat_order")
-      .eq("room_id", room.id);
-    if (playersError) {
-      console.error("Supabase room_players lookup error:", playersError);
-    }
-
-    const maxPlayers = room.max_players ?? MAX_PLAYERS;
-    if ((players?.length ?? 0) > maxPlayers) {
-      await supabase.from("room_players").delete().eq("room_id", room.id).eq("player_id", user.id);
-      toast.error("Room is full");
-      setJoining(false);
-      return;
-    }
-
-    if (players) {
-      const usedSeats = new Set(
-        players.filter((p) => p.player_id !== user.id).map((p) => p.seat_order),
-      );
-      let nextSeat = 0;
-      while (usedSeats.has(nextSeat)) nextSeat += 1;
-      await supabase
-        .from("room_players")
-        .update({ seat_order: nextSeat })
-        .eq("room_id", room.id)
-        .eq("player_id", user.id);
-    }
-    setJoining(false);
-    navigate({ to: "/game/$roomId", params: { roomId: room.id } });
   }
 
   return (
@@ -195,16 +219,33 @@ function LobbyPage() {
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-hero shadow-soft">
             <Sparkles className="h-5 w-5 text-primary-foreground" />
           </div>
-          <span className="font-semibold tracking-tight">DPDPA Tycoon</span>
+          <span className="font-semibold tracking-tight">Data Viz</span>
         </Link>
-        <Button variant="ghost" size="sm" onClick={signOut}>
-          <LogOut className="mr-2 h-4 w-4" /> Sign out
-        </Button>
+        {user && !isAnonymous ? (
+          <Button variant="ghost" size="sm" onClick={signOut}>
+            <LogOut className="mr-2 h-4 w-4" /> Sign out
+          </Button>
+        ) : (
+          <Link to="/auth" search={{ mode: "signup" }}>
+            <Button variant="ghost" size="sm">
+              Save progress
+            </Button>
+          </Link>
+        )}
       </header>
 
       <main className="mx-auto max-w-5xl px-6 py-10 md:py-14">
-        <h1 className="text-3xl md:text-4xl font-semibold tracking-tight">Lobby</h1>
-        <p className="mt-2 text-muted-foreground">Choose a mode to start</p>
+        <h1 className="text-3xl md:text-4xl font-semibold tracking-tight">Multiplayer Lobby</h1>
+        <p className="mt-2 text-muted-foreground">Pick a name, then create or join a room</p>
+
+        <div className="mt-6 max-w-md">
+          <Input
+            placeholder="Your display name"
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
+            className="h-11"
+          />
+        </div>
 
         <div className="mt-8 grid gap-6 md:grid-cols-2">
           <Card className="p-6 flex flex-col">

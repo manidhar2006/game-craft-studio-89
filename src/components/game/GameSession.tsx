@@ -7,6 +7,7 @@ import { GameBoard } from "./GameBoard";
 import { PlayerPanel } from "./PlayerPanel";
 import { PropertiesBreakdown } from "./PropertiesBreakdown";
 import { DiceRoller } from "./DiceRoller";
+import { QuestionOverlay } from "./QuestionOverlay";
 import { buildInitialGameState, useMultiplayerGame } from "@/lib/game/use-multiplayer-game";
 import type { GameState } from "@/lib/game/engine-types";
 import { useAuth } from "@/lib/auth-context";
@@ -555,6 +556,9 @@ export function GameSession({ roomId }: Props) {
             players={state.players}
             currentPlayerId={state.currentPlayerId}
             propertyOwners={state.propertyOwners}
+            topDownCamera={state.phase === "mcq"}
+            diceRolling={state.phase === "rolling"}
+            diceValue={state.lastRoll}
             centerContent={
               <DiceRoller
                 disabled={!game.canRoll}
@@ -575,36 +579,11 @@ export function GameSession({ roomId }: Props) {
             <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Action Desk</div>
             <div className="mt-3 space-y-3">
               {state.phase === "mcq" && activeMcq ? (
-                <>
-                  <div>
-                    <div className="text-lg font-semibold">{activeMcq.principleName}</div>
-                    <div className="text-sm text-muted-foreground">
-                      {activeMcq.mode === "buy"
-                        ? "Answer correctly to acquire this tile."
-                        : activeMcq.mode === "rent_dispute"
-                          ? "Answer correctly to avoid rent."
-                          : "Answer correctly to strengthen the tile."}
-                    </div>
-                  </div>
-                  <div className="max-h-48 overflow-y-auto rounded-2xl border border-border/60 bg-secondary/50 p-4 text-sm leading-relaxed">
-                    {activeMcq.question.text}
-                  </div>
-                  <div className="grid gap-2">
-                    {activeMcq.question.options.map((option) => (
-                      <Button
-                        key={option.key}
-                        variant="secondary"
-                        className="h-auto min-h-[3rem] justify-start rounded-xl border border-border/60 bg-background px-3 py-3 text-left whitespace-normal break-words"
-                        onClick={() => game.answerMcq(option.key)}
-                        disabled={!isMyTurn}
-                      >
-                        <span className="mr-2 font-semibold shrink-0">{option.key}.</span>
-                        <span className="leading-snug">{option.text}</span>
-                      </Button>
-                    ))}
-                  </div>
-                  
-                </>
+                <div className="rounded-2xl border border-dashed border-border/60 bg-secondary/40 p-4 text-sm text-muted-foreground">
+                  {isMyTurn
+                    ? `Answering ${activeMcq.principleName}…`
+                    : `${currentPlayer?.name ?? "Player"} is answering ${activeMcq.principleName}.`}
+                </div>
               ) : state.phase === "purchase" && state.pendingBuy ? (
                 <>
                   <div>
@@ -790,6 +769,15 @@ export function GameSession({ roomId }: Props) {
           </Card>
         </aside>
       </main>
+
+      {activeMcq && state.phase === "mcq" && isMyTurn ? (
+        <QuestionOverlay
+          question={activeMcq.question}
+          principleName={activeMcq.principleName}
+          mode={activeMcq.mode}
+          onAnswer={game.answerMcq}
+        />
+      ) : null}
     </div>
   );
 }

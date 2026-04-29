@@ -64,51 +64,51 @@
 :root {
   --radius: 0.875rem;
 
-  /* Calm, elegant DPDPA Tycoon palette — sage, cream, ink with warm gold accent */
-  --background: oklch(0.975 0.012 95); /* warm cream */
-  --foreground: oklch(0.24 0.03 160); /* deep ink-green */
-  --card: oklch(0.99 0.008 95);
-  --card-foreground: oklch(0.24 0.03 160);
-  --popover: oklch(0.99 0.008 95);
-  --popover-foreground: oklch(0.24 0.03 160);
+  /* Data Viz neon-cyberpunk palette */
+  --background: oklch(0.10 0.02 270); /* deep navy-black */
+  --foreground: oklch(0.95 0.01 240);
+  --card: oklch(0.14 0.025 270);
+  --card-foreground: oklch(0.95 0.01 240);
+  --popover: oklch(0.14 0.025 270);
+  --popover-foreground: oklch(0.95 0.01 240);
 
-  --primary: oklch(0.42 0.07 165); /* sage / forest */
-  --primary-foreground: oklch(0.98 0.01 95);
-  --primary-glow: oklch(0.55 0.09 160);
+  --primary: oklch(0.78 0.18 195); /* electric cyan */
+  --primary-foreground: oklch(0.08 0.02 270);
+  --primary-glow: oklch(0.82 0.20 195);
 
-  --secondary: oklch(0.93 0.02 95); /* parchment */
-  --secondary-foreground: oklch(0.3 0.04 160);
+  --secondary: oklch(0.22 0.03 270);
+  --secondary-foreground: oklch(0.95 0.01 240);
 
-  --muted: oklch(0.94 0.015 100);
-  --muted-foreground: oklch(0.45 0.02 160);
+  --muted: oklch(0.20 0.025 270);
+  --muted-foreground: oklch(0.65 0.04 250);
 
-  --accent: oklch(0.78 0.12 75); /* warm gold */
-  --accent-foreground: oklch(0.22 0.04 160);
+  --accent: oklch(0.72 0.25 320); /* magenta */
+  --accent-foreground: oklch(0.10 0.02 270);
 
-  --destructive: oklch(0.55 0.18 28);
-  --destructive-foreground: oklch(0.98 0.01 95);
+  --destructive: oklch(0.62 0.22 18);
+  --destructive-foreground: oklch(0.98 0.01 240);
 
-  --border: oklch(0.88 0.02 100);
-  --input: oklch(0.92 0.015 100);
-  --ring: oklch(0.55 0.09 160);
+  --border: oklch(0.30 0.05 260 / 0.45);
+  --input: oklch(0.20 0.03 270);
+  --ring: oklch(0.78 0.18 195);
 
-  /* Game-specific tokens: principle color groups */
-  --group-saffron: oklch(0.78 0.14 65);
+  /* Game-specific tokens: principle color groups (neon) */
+  --group-saffron: oklch(0.85 0.18 60);
   --group-white: oklch(0.95 0.01 100);
-  --group-green: oklch(0.62 0.13 155);
-  --group-navy: oklch(0.42 0.09 250);
+  --group-green: oklch(0.85 0.21 145);
+  --group-navy: oklch(0.65 0.20 250);
 
-  --tile-surface: oklch(0.97 0.01 95);
-  --board-bg: oklch(0.36 0.05 165);
-  --board-felt: oklch(0.32 0.045 165);
+  --tile-surface: oklch(0.16 0.03 270);
+  --board-bg: oklch(0.10 0.02 270);
+  --board-felt: oklch(0.08 0.02 270);
 
-  --gradient-hero: linear-gradient(135deg, oklch(0.42 0.07 165), oklch(0.55 0.09 160));
-  --gradient-board: radial-gradient(ellipse at center, oklch(0.4 0.055 165), oklch(0.28 0.04 165));
-  --gradient-gold: linear-gradient(135deg, oklch(0.82 0.13 80), oklch(0.72 0.14 65));
+  --gradient-hero: linear-gradient(135deg, oklch(0.72 0.25 320), oklch(0.78 0.18 195));
+  --gradient-board: radial-gradient(ellipse at center, oklch(0.16 0.03 270), oklch(0.06 0.015 270));
+  --gradient-gold: linear-gradient(135deg, oklch(0.78 0.18 195), oklch(0.72 0.25 320));
 
-  --shadow-soft: 0 1px 2px oklch(0.2 0.03 160 / 0.06), 0 8px 24px oklch(0.2 0.03 160 / 0.08);
-  --shadow-tile: 0 2px 0 oklch(0.2 0.03 160 / 0.08), 0 6px 16px oklch(0.2 0.03 160 / 0.12);
-  --shadow-glow: 0 0 0 4px oklch(0.78 0.12 75 / 0.25);
+  --shadow-soft: 0 1px 2px oklch(0 0 0 / 0.5), 0 8px 24px oklch(0.78 0.18 195 / 0.12);
+  --shadow-tile: 0 2px 0 oklch(0 0 0 / 0.45), 0 6px 16px oklch(0.78 0.18 195 / 0.15);
+  --shadow-glow: 0 0 0 3px oklch(0.78 0.18 195 / 0.35), 0 0 30px oklch(0.78 0.18 195 / 0.5);
 
   --transition-smooth: cubic-bezier(0.4, 0, 0.2, 1);
   --chart-1: oklch(0.646 0.222 41.116);
