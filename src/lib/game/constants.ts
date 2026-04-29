@@ -1,94 +1,127 @@
+export type ColorGroup = "brown" | "lightBlue" | "pink" | "orange";
+
+export interface PrincipleConfig {
+  principleNo: number;
+  tileIndex: number;
+  name: string;
+  shortName: string;
+  group: ColorGroup;
+  price: number;
+  baseRent: number;
+  layer1Rent: number;
+  layer2Rent: number;
+  layer3Rent: number;
+  layerCost: number;
+  description: string;
+}
+
+export type BoardTile =
+  | { index: number; type: "start"; name: string; subtitle?: string }
+  | {
+      index: number;
+      type: "principle";
+      name: string;
+      subtitle?: string;
+      group: ColorGroup;
+      principleNo: number;
+    }
+  | { index: number; type: "regulator"; name: string; subtitle?: string }
+  | { index: number; type: "tax"; name: string; subtitle?: string; amount: number }
+  | { index: number; type: "jail_visit"; name: string; subtitle?: string }
+  | { index: number; type: "go_to_jail"; name: string; subtitle?: string }
+  | { index: number; type: "free_audit"; name: string; subtitle?: string };
+
 export const PRINCIPLES: PrincipleConfig[] = [
   {
     principleNo: 1,
     tileIndex: 1,
-    name: "Notice & Transparency",
-    shortName: "Notice",
-    group: "saffron",
-    price: 80,
-    baseRent: 8,
-    layer1Rent: 40,
-    layer2Rent: 120,
-    layer3Rent: 320,
-    layerCost: 50,
-    description: "Inform Data Principals about purpose, contact details, and rights at collection.",
-  },
-  {
-    principleNo: 2,
-    tileIndex: 3,
     name: "Lawful Processing",
-    shortName: "Lawful Processing",
-    group: "white",
+    shortName: "Lawful Proc",
+    group: "brown",
     price: 60,
     baseRent: 6,
     layer1Rent: 30,
     layer2Rent: 90,
     layer3Rent: 250,
     layerCost: 50,
-    description: "Process personal data only with consent or for legitimate uses under §7.",
+    description: "Process personal data only with consent or legitimate uses under the DPDPA.",
+  },
+  {
+    principleNo: 2,
+    tileIndex: 3,
+    name: "Notice & Transparency",
+    shortName: "Notice",
+    group: "brown",
+    price: 80,
+    baseRent: 8,
+    layer1Rent: 40,
+    layer2Rent: 120,
+    layer3Rent: 300,
+    layerCost: 50,
+    description: "Give clear notices about purpose, contact details, and Data Principal rights.",
   },
   {
     principleNo: 3,
-    tileIndex: 5,
+    tileIndex: 6,
     name: "Consent",
     shortName: "Consent",
-    group: "green",
+    group: "lightBlue",
     price: 140,
     baseRent: 12,
     layer1Rent: 60,
     layer2Rent: 180,
-    layer3Rent: 500,
+    layer3Rent: 450,
     layerCost: 100,
-    description: "Free, specific, informed, unconditional, and unambiguous consent.",
+    description: "Consent must be free, specific, informed, unconditional, and unambiguous.",
   },
   {
     principleNo: 4,
-    tileIndex: 7,
+    tileIndex: 8,
     name: "Purpose Limitation",
     shortName: "Purpose",
-    group: "navy",
+    group: "lightBlue",
     price: 140,
     baseRent: 12,
     layer1Rent: 60,
     layer2Rent: 180,
-    layer3Rent: 500,
+    layer3Rent: 450,
     layerCost: 100,
-    description: "Process data only for the specified purpose disclosed in the notice.",
+    description: "Use personal data only for the purpose disclosed to the Data Principal.",
   },
   {
     principleNo: 5,
-    tileIndex: 9,
+    tileIndex: 11,
     name: "Data Minimization",
-    shortName: "Minimization",
-    group: "saffron",
+    shortName: "Minimiz",
+    group: "lightBlue",
     price: 160,
     baseRent: 14,
-    layer1Rent: 70,
-    layer2Rent: 200,
-    layer3Rent: 550,
+    layer1Rent: 80,
+    layer2Rent: 220,
+    layer3Rent: 500,
     layerCost: 100,
     description: "Collect only the personal data necessary for the stated purpose.",
   },
   {
     principleNo: 6,
-    tileIndex: 11,
+    tileIndex: 13,
     name: "Data Accuracy",
     shortName: "Accuracy",
-    group: "white",
+    group: "pink",
     price: 220,
     baseRent: 18,
     layer1Rent: 90,
-    layer2Rent: 250,
+    layer2Rent: 270,
     layer3Rent: 700,
     layerCost: 150,
-    description: "Ensure personal data is complete, accurate, and consistent.",
+    description: "Keep personal data complete, accurate, and consistent where it is used.",
   },
   {
     principleNo: 7,
-    tileIndex: 13,
+    tileIndex: 16,
     name: "Storage Limitation",
     shortName: "Storage",
-    group: "green",
+    group: "pink",
     price: 240,
     baseRent: 20,
     layer1Rent: 100,
@@ -99,84 +132,84 @@ export const PRINCIPLES: PrincipleConfig[] = [
   },
   {
     principleNo: 8,
-    tileIndex: 14,
+    tileIndex: 17,
     name: "Security & Integrity",
     shortName: "Security",
-    group: "navy",
+    group: "orange",
     price: 300,
     baseRent: 26,
     layer1Rent: 130,
     layer2Rent: 390,
     layer3Rent: 900,
     layerCost: 200,
-    description: "Reasonable security safeguards to prevent breaches.",
+    description: "Use reasonable safeguards to prevent personal data breaches.",
   },
   {
     principleNo: 9,
-    tileIndex: 15,
+    tileIndex: 19,
     name: "Accountability",
-    shortName: "Accountability",
-    group: "saffron",
+    shortName: "Account",
+    group: "orange",
     price: 350,
-    baseRent: 35,
-    layer1Rent: 175,
-    layer2Rent: 500,
-    layer3Rent: 1100,
+    baseRent: 30,
+    layer1Rent: 150,
+    layer2Rent: 450,
+    layer3Rent: 1000,
     layerCost: 200,
-    description: "Demonstrate compliance with all DPDPA obligations.",
+    description: "Demonstrate compliance with DPDPA obligations and fiduciary duties.",
   },
 ];
 
-export const BOARD_TILES: BoardTile[] = (() => {
-  const tiles: BoardTile[] = [];
-  const principleByTile = new Map(PRINCIPLES.map((p) => [p.tileIndex, p]));
+const PRINCIPLE_BY_TILE = new Map(PRINCIPLES.map((principle) => [principle.tileIndex, principle]));
 
-  // 16 tiles arranged around a 5x5 grid perimeter, indices 0..15
-  for (let i = 0; i < 16; i++) {
-    if (i === 0) {
-      tiles.push({ index: 0, type: "start", name: "START", subtitle: "Collect ₹200" });
-    } else if ([1, 3, 5, 7, 9, 11, 13, 14, 15].includes(i)) {
-      const p = principleByTile.get(i);
-      if (p)
-        tiles.push({
-          index: i,
-          type: "principle",
-          name: `P${p.principleNo}`,
-          subtitle: p.shortName,
-          group: p.group,
-          principleNo: p.principleNo,
-        });
-      else
-        tiles.push({ index: i, type: "regulator", name: "Regulator Card", subtitle: "Draw event" });
-    } else if (i === 2 || i === 10) {
-      tiles.push({ index: i, type: "regulator", name: "Regulator Card", subtitle: "Draw event" });
-    } else if (i === 4) {
-      tiles.push({ index: i, type: "jail_visit", name: "DPB HEARING", subtitle: "Just visiting" });
-    } else if (i === 6) {
-      tiles.push({ index: i, type: "tax", name: "Data Breach 2", subtitle: "−₹100", amount: 100 });
-    } else if (i === 8) {
-      tiles.push({ index: i, type: "tax", name: "Data Breach 1", subtitle: "−₹200", amount: 200 });
-    } else if (i === 12) {
-      tiles.push({ index: i, type: "go_to_jail", name: "GO TO HEARING", subtitle: "Skip 2 turns" });
-    } else {
-      tiles.push({ index: i, type: "regulator", name: "Regulator Card", subtitle: "Draw event" });
-    }
+export const BOARD_TILES: BoardTile[] = Array.from({ length: 20 }, (_, index) => {
+  const principle = PRINCIPLE_BY_TILE.get(index);
+  if (principle) {
+    return {
+      index,
+      type: "principle",
+      name: `P${principle.principleNo}`,
+      subtitle: principle.shortName,
+      group: principle.group,
+      principleNo: principle.principleNo,
+    };
   }
-  return tiles;
-})();
+
+  switch (index) {
+    case 0:
+      return { index, type: "start", name: "START", subtitle: "Collect ₹200" };
+    case 2:
+    case 18:
+      return { index, type: "regulator", name: "Regulator Card", subtitle: "Draw event" };
+    case 4:
+      return { index, type: "tax", name: "Penalty", subtitle: "₹100", amount: 100 };
+    case 5:
+      return { index, type: "free_audit", name: "FREE AUDIT", subtitle: "Collect pot" };
+    case 10:
+      return { index, type: "jail_visit", name: "DPB VISIT", subtitle: "Hearing tile" };
+    case 15:
+      return { index, type: "go_to_jail", name: "GO TO DPB", subtitle: "Move to 10" };
+    case 7:
+      return { index, type: "tax", name: "Penalty", subtitle: "₹150", amount: 150 };
+    case 12:
+      return { index, type: "tax", name: "Breach Fine", subtitle: "₹200", amount: 200 };
+    default:
+      return { index, type: "regulator", name: "Regulator Card", subtitle: "Draw event" };
+  }
+});
 
 export const GROUP_COLORS: Record<ColorGroup, string> = {
-  saffron: "var(--group-saffron)",
-  white: "var(--group-white)",
-  green: "var(--group-green)",
-  navy: "var(--group-navy)",
+  brown: "oklch(0.5 0.08 55)",
+  lightBlue: "oklch(0.72 0.11 220)",
+  pink: "oklch(0.68 0.16 345)",
+  orange: "oklch(0.7 0.16 52)",
 };
 
 export const GROUP_LABELS: Record<ColorGroup, string> = {
-  saffron: "Foundation",
-  white: "Transparency",
-  green: "Lifecycle",
-  navy: "Purpose & Security",
+  brown: "Foundation",
+  lightBlue: "Consent Block",
+  pink: "Data Lifecycle",
+  orange: "Hard Obligations",
 };
 
 export const AVATARS = [
@@ -190,11 +223,13 @@ export const AVATARS = [
   { id: 7, name: "Sneha", color: "oklch(0.7 0.14 80)", emoji: "🧕🏽" },
 ] as const;
 
-export const STARTING_CREDITS = 200;
+export const STARTING_CREDITS = 1500;
 export const PASS_START_BONUS = 200;
+export const BUY_QUESTION_BOUNTY = 50;
+export const JAIL_FINE = 50;
+export const JAIL_MAX_ATTEMPTS = 3;
 export const MAX_PLAYERS = 4;
 export const MIN_PLAYERS = 2;
-export const JAIL_TURNS = 2;
 
 export function generateRoomCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";

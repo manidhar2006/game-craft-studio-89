@@ -102,7 +102,7 @@ function LandingPage() {
             {
               icon: Users,
               title: "2–4 players",
-              body: "Solo vs. Computer or invite friends with a room link.",
+              body: "Create a room and invite friends with a room link.",
             },
             {
               icon: Shield,

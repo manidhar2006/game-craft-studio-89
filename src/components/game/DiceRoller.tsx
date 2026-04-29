@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dices } from "lucide-react";
 
@@ -44,30 +45,29 @@ const PIPS: Record<number, [number, number][]> = {
   ],
 };
 
-function Die({ value, rolling }: { value: number | null; rolling: boolean }) {
+function Die({ value, rolling }: { value: number; rolling: boolean }) {
   return (
-    <div className="relative h-16 w-16 [perspective:900px]">
+    <div className="relative h-20 w-20">
       <div
-        className={`absolute inset-0 rounded-[1rem] border border-border/80 bg-[linear-gradient(145deg,oklch(0.99_0.01_95),oklch(0.92_0.02_95))] shadow-[inset_0_1px_0_oklch(1_0_0_/_0.85),0_14px_28px_-14px_oklch(0.2_0.03_160_/_0.5)] transition-transform duration-500 [transform-style:preserve-3d] ${rolling ? "animate-dice-roll" : ""}`}
+        className={`absolute inset-x-4 bottom-0 h-3 rounded-full bg-black/15 blur-md transition-opacity ${
+          rolling ? "opacity-70" : "opacity-40"
+        }`}
+      />
+      <div
+        className={`absolute inset-0 grid grid-cols-3 grid-rows-3 gap-0.5 rounded-2xl border border-border/70 bg-white p-2 shadow-sm transition-transform duration-75 ${
+          rolling ? "animate-[spin_0.35s_linear_infinite]" : ""
+        }`}
       >
-        <div className="absolute inset-0 rounded-[1rem] bg-[radial-gradient(circle_at_28%_24%,oklch(1_0_0_/_0.9),transparent_34%),linear-gradient(145deg,oklch(0.99_0.01_95),oklch(0.94_0.02_95))]" />
-        <div className="absolute inset-0 rounded-[1rem] shadow-[inset_0_-10px_16px_-14px_oklch(0.2_0.03_160_/_0.25)]" />
-        <div className="absolute inset-[0.25rem] grid grid-cols-3 grid-rows-3 gap-0.5 rounded-[0.8rem]">
-          {Array.from({ length: 9 }).map((_, i) => {
-            const r = Math.floor(i / 3);
-            const c = i % 3;
-            const showPip = value && PIPS[value].some(([rr, cc]) => rr === r && cc === c);
-            return (
-              <span key={i} className="flex items-center justify-center">
-                {showPip && (
-                  <span className="h-2.5 w-2.5 rounded-full bg-[radial-gradient(circle_at_30%_30%,white,oklch(0.2_0.03_160))] shadow-[0_1px_1px_oklch(1_0_0_/_0.45)]" />
-                )}
-              </span>
-            );
-          })}
-        </div>
-        <div className="pointer-events-none absolute inset-y-0 left-0 w-1 rounded-l-[1rem] bg-gradient-to-b from-white/70 via-white/10 to-black/10" />
-        <div className="pointer-events-none absolute inset-y-0 right-0 w-1 rounded-r-[1rem] bg-gradient-to-b from-black/10 via-black/0 to-black/20" />
+        {Array.from({ length: 9 }).map((_, i) => {
+          const r = Math.floor(i / 3);
+          const c = i % 3;
+          const showPip = PIPS[value].some(([rr, cc]) => rr === r && cc === c);
+          return (
+            <span key={i} className="flex items-center justify-center">
+              {showPip ? <span className="h-2.5 w-2.5 rounded-full bg-black" /> : null}
+            </span>
+          );
+        })}
       </div>
     </div>
   );
@@ -81,13 +81,34 @@ export function DiceRoller({
   currentName,
   isHumanTurn,
 }: Props) {
+  const [displayValue, setDisplayValue] = useState<number>(1);
+
+  useEffect(() => {
+    if (!rolling) {
+      if (lastRoll !== null) {
+        setDisplayValue(lastRoll);
+      }
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setDisplayValue((previous) => (previous % 6) + 1);
+    }, 90);
+
+    return () => clearInterval(timer);
+  }, [rolling, lastRoll]);
+
   const turnText = isHumanTurn ? "Your roll" : `${currentName}'s turn`;
 
   return (
     <div className="flex flex-col items-center gap-4 rounded-2xl border border-border/60 bg-card p-5 shadow-soft">
-      <div className="text-sm text-muted-foreground">{turnText}</div>
-      <div className={`flex items-center justify-center transition-transform duration-300 ${rolling ? "scale-105" : "scale-100"}`}>
-        <Die value={lastRoll} rolling={rolling} />
+      <div className="text-sm font-medium text-muted-foreground">{turnText}</div>
+      <div
+        className={`rounded-[1.65rem] border border-border/60 bg-secondary/40 p-4 transition-transform duration-300 ${
+          rolling ? "scale-105" : "scale-100"
+        }`}
+      >
+        <Die value={displayValue} rolling={rolling} />
       </div>
       <Button
         onClick={onRoll}
@@ -95,7 +116,7 @@ export function DiceRoller({
         size="lg"
         className="rounded-full px-8 shadow-sm transition-transform active:scale-[0.98]"
       >
-        <Dices className="mr-2 h-4 w-4" /> Roll a die
+        <Dices className="mr-2 h-4 w-4" /> Roll die
       </Button>
     </div>
   );

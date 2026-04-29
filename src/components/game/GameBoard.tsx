@@ -15,8 +15,8 @@ interface Props {
 }
 
 /**
- * 16-tile rectangular board, 5 across × 5 down (corners + 3 per side).
- * We render a 5x5 grid where the inner cells form a calm felt-style center.
+ * 20-tile rectangular board, 6 across × 6 down (corners + 4 per side).
+ * We render a 6x6 grid where the inner cells form a calm felt-style center.
  */
 export function GameBoard({
   tiles,
@@ -25,16 +25,16 @@ export function GameBoard({
   propertyOwners,
   centerContent,
 }: Props) {
-  // Map tile index → grid position. 5x5 perimeter starting bottom-left, going anti-clockwise.
+  // Map tile index → grid position matching the spec diagram.
   const positions: Record<number, { col: number; row: number }> = {};
-  // Bottom row (left->right): indices 0..4 -> col 1..5, row 5
-  for (let i = 0; i <= 4; i++) positions[i] = { col: i + 1, row: 5 };
-  // Right column (bottom->top, excluding corners): indices 5..8 -> col 5, row 4..1
-  for (let i = 5; i <= 8; i++) positions[i] = { col: 5, row: 9 - i };
-  // Top row (right->left, excluding top-right): indices 9..12 -> col 4..1, row 1
-  for (let i = 9; i <= 12; i++) positions[i] = { col: 13 - i, row: 1 };
-  // Left column (top->bottom, excluding corners): indices 13..15 -> col 1, row 2..4
-  for (let i = 13; i <= 15; i++) positions[i] = { col: 1, row: i - 11 };
+  // Bottom row (right->left): 0..5 -> col 6..1, row 6
+  for (let i = 0; i <= 5; i++) positions[i] = { col: 6 - i, row: 6 };
+  // Left column (bottom->top): 6..10 -> col 1, row 5..1
+  for (let i = 6; i <= 10; i++) positions[i] = { col: 1, row: 11 - i };
+  // Top row (left->right): 11..15 -> col 2..6, row 1
+  for (let i = 11; i <= 15; i++) positions[i] = { col: i - 9, row: 1 };
+  // Right column (top->bottom): 16..19 -> col 6, row 2..5
+  for (let i = 16; i <= 19; i++) positions[i] = { col: 6, row: i - 14 };
 
   // Track visual positions for smooth tile-by-tile hopping
   const [visualPositions, setVisualPositions] = useState<Record<string, number>>(() => {
@@ -51,12 +51,12 @@ export function GameBoard({
       if (p.isEliminated) return;
       const vPos = visualPositions[p.id] ?? p.position;
       if (vPos !== p.position) {
-        // Step towards logical position +1 at a time (wrap around at 16)
+        // Step towards logical position +1 at a time (wrap around at 20)
         timeouts.push(
           setTimeout(() => {
             setVisualPositions((prev) => ({
               ...prev,
-              [p.id]: (prev[p.id] + 1) % 16,
+              [p.id]: (prev[p.id] + 1) % 20,
             }));
           }, 200) // 200ms per tile hop
         );
@@ -67,19 +67,20 @@ export function GameBoard({
 
   return (
     <div className="relative aspect-square w-full max-w-[720px]">
-      <div className="grid h-full w-full grid-cols-5 grid-rows-5 gap-1.5 rounded-3xl bg-gradient-to-br from-secondary to-muted p-3 shadow-[0_30px_60px_-30px_rgba(40,60,55,0.35)] border border-border">
+      <div className="grid h-full w-full grid-cols-6 grid-rows-6 gap-1.5 rounded-3xl bg-gradient-to-br from-secondary to-muted p-3 shadow-[0_30px_60px_-30px_rgba(40,60,55,0.35)] border border-border">
         {/* Center plate */}
-        <div className="col-start-2 col-end-5 row-start-2 row-end-5 rounded-2xl bg-[oklch(0.96_0.012_120)] border border-border/60 flex items-center justify-center p-4">
+        <div className="col-start-2 col-end-6 row-start-2 row-end-6 rounded-2xl bg-[oklch(0.96_0.012_120)] border border-border/60 flex items-center justify-center p-4">
           {centerContent}
         </div>
 
         {tiles.map((tile) => {
           const pos = positions[tile.index];
-          const owner = tile.principleNo ? propertyOwners[tile.principleNo] : undefined;
+          const isPrinciple = tile.type === "principle";
+          const owner = isPrinciple ? propertyOwners[tile.principleNo] : undefined;
           const ownerPlayer = owner ? players.find((p) => p.id === owner) : undefined;
           const layers =
-            ownerPlayer && tile.principleNo ? (ownerPlayer.layers[tile.principleNo] ?? 0) : 0;
-          const principle = tile.principleNo
+            ownerPlayer && isPrinciple ? (ownerPlayer.layers[tile.principleNo] ?? 0) : 0;
+          const principle = isPrinciple
             ? PRINCIPLES.find((p) => p.principleNo === tile.principleNo)
             : undefined;
 

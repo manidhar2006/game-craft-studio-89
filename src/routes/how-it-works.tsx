@@ -30,7 +30,7 @@ function HowItWorks() {
     {
       icon: Dices,
       title: "Roll the die",
-      body: "On your turn, roll once. Your token glides across the 20-tile board.",
+      body: "On your turn, roll one die. Your token glides across the 20-tile board.",
     },
     {
       icon: HelpCircle,
@@ -40,17 +40,17 @@ function HowItWorks() {
     {
       icon: Coins,
       title: "Buy a principle",
-      body: "Land on an unowned principle and answer correctly to buy it at the listed price.",
+      body: "Land on an unowned principle and answer correctly to earn ₹50 and unlock buying.",
     },
     {
       icon: Building2,
       title: "Build compliance",
-      body: "Own a full color group? Stack up to 3 compliance layers — rents grow ×5, ×15, ×45.",
+      body: "Own a full color group? Stack up to 3 compliance layers, built evenly across the group.",
     },
     {
       icon: Gavel,
       title: "Avoid the hearing",
-      body: "Land on the wrong tile and you're sent to a DPB Hearing — sit out 2 turns.",
+      body: "At DPB Hearing, pay ₹50, roll a 6 within 3 attempts, or use a free card.",
     },
     {
       icon: Trophy,

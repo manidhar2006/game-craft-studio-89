@@ -238,18 +238,20 @@
 
   @keyframes dice-roll {
     0% {
-      transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(1);
+      transform: translateY(0) rotate(0deg) scale(1);
     }
-    50% {
-      transform: rotateX(240deg) rotateY(180deg) rotateZ(120deg) translateY(-2px)
-        scale(1.08);
+    35% {
+      transform: translateY(-12px) rotate(180deg) scale(1.06);
+    }
+    70% {
+      transform: translateY(4px) rotate(330deg) scale(0.98);
     }
     100% {
-      transform: rotateX(540deg) rotateY(360deg) rotateZ(240deg) scale(1);
+      transform: translateY(0) rotate(360deg) scale(1);
     }
   }
   .animate-dice-roll {
-    animation: dice-roll 0.72s var(--transition-smooth);
+    animation: dice-roll 0.55s ease-out;
     transform-origin: center;
     backface-visibility: hidden;
   }

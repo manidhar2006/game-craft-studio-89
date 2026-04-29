@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { GameBoard } from "./GameBoard";
 import { PlayerPanel } from "./PlayerPanel";
+import { PropertiesBreakdown } from "./PropertiesBreakdown";
 import { DiceRoller } from "./DiceRoller";
-import { buildInitialGameState, useSoloGame } from "@/lib/game/use-solo-game";
+import { buildInitialGameState, useMultiplayerGame } from "@/lib/game/use-multiplayer-game";
 import type { GameState } from "@/lib/game/engine-types";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,7 +30,6 @@ const ROOM_CODE_RE = /^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function GameSession({ roomId }: Props) {
-  const isSolo = roomId === "solo";
   const navigate = useNavigate();
   const { user } = useAuth();
   const [profile, setProfile] = useState<{ display_name: string; avatar_id: number } | null>(null);
@@ -71,7 +71,7 @@ export function GameSession({ roomId }: Props) {
   }, [user]);
 
   useEffect(() => {
-    if (isSolo || !user) return;
+    if (!user) return;
 
     const raw = roomId.trim();
     if (UUID_RE.test(raw)) {
@@ -109,10 +109,10 @@ export function GameSession({ roomId }: Props) {
     return () => {
       active = false;
     };
-  }, [isSolo, navigate, roomId, user]);
+  }, [navigate, roomId, user]);
 
   useEffect(() => {
-    if (isSolo || !user || !resolvedRoomId) return undefined;
+    if (!user || !resolvedRoomId) return undefined;
 
     const displayName = profile?.display_name ?? user.email?.split("@")[0] ?? "Player";
 
@@ -238,18 +238,18 @@ export function GameSession({ roomId }: Props) {
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [isSolo, navigate, profile?.display_name, resolvedRoomId, user]);
+  }, [navigate, profile?.display_name, resolvedRoomId, user]);
 
-  const meInRoom = !isSolo ? roomPlayers.find((player) => player.player_id === user?.id) : null;
+  const meInRoom = roomPlayers.find((player) => player.player_id === user?.id);
   const requiredPlayers = roomInfo?.max_players ?? 4;
-  const isHost = !isSolo && !!user && roomInfo?.host_id === user.id;
-  const playersReady = !isSolo && roomPlayers.length >= requiredPlayers;
-  const avatarsReady = !isSolo && roomPlayers.every((player) => player.avatar_id !== null);
+  const isHost = !!user && roomInfo?.host_id === user.id;
+  const playersReady = roomPlayers.length >= requiredPlayers;
+  const avatarsReady = roomPlayers.every((player) => player.avatar_id !== null);
   const setupReady = playersReady && avatarsReady;
-  const roomStarted = !isSolo && roomInfo?.status === "in_progress";
+  const roomStarted = roomInfo?.status === "in_progress";
 
   async function startRoomGame() {
-    if (!user || isSolo || !isHost || !setupReady || !resolvedRoomId) return;
+    if (!user || !isHost || !setupReady || !resolvedRoomId) return;
 
     setStartingGame(true);
     const firstPlayer = [...roomPlayers].sort((a, b) => a.seat_order - b.seat_order)[0];
@@ -289,7 +289,7 @@ export function GameSession({ roomId }: Props) {
   }
 
   async function selectRoomAvatar(nextAvatarId: number) {
-    if (!user || isSolo || !resolvedRoomId) return;
+    if (!user || !resolvedRoomId) return;
 
     setSavingAvatar(true);
     const { error } = await supabase
@@ -306,18 +306,16 @@ export function GameSession({ roomId }: Props) {
     setSavingAvatar(false);
   }
 
-  const roomOpponents = !isSolo
-    ? roomPlayers
-        .filter((player) => player.player_id !== user?.id)
-        .map((player) => ({
-          id: player.player_id,
-          name: player.display_name,
-          avatarId: player.avatar_id ?? player.seat_order % AVATARS.length,
-        }))
-    : undefined;
+  const roomOpponents = roomPlayers
+    .filter((player) => player.player_id !== user?.id)
+    .map((player) => ({
+      id: player.player_id,
+      name: player.display_name,
+      avatarId: player.avatar_id ?? player.seat_order % AVATARS.length,
+    }));
 
   async function persistRoomState(nextState: GameState) {
-    if (isSolo || !roomStarted || !user || !resolvedRoomId) return;
+    if (!roomStarted || !user || !resolvedRoomId) return;
 
     const { error } = await supabase
       .from("rooms")
@@ -332,25 +330,20 @@ export function GameSession({ roomId }: Props) {
     }
   }
 
-  const game = useSoloGame({
-    enabled: !!profile && (isSolo || (roomStarted && !!roomGameState)),
-    humanName: isSolo
-      ? (profile?.display_name ?? "You")
-      : (meInRoom?.display_name ?? profile?.display_name ?? "You"),
-    humanAvatar: isSolo ? (profile?.avatar_id ?? 0) : (meInRoom?.avatar_id ?? 0),
+  const game = useMultiplayerGame({
+    enabled: !!profile && roomStarted && !!roomGameState,
+    humanName: meInRoom?.display_name ?? profile?.display_name ?? "You",
+    humanAvatar: meInRoom?.avatar_id ?? 0,
     opponents: roomOpponents,
-    localPlayerId: isSolo ? "human" : (user?.id ?? "human"),
-    autoPlayBots: isSolo,
-    initialState: isSolo ? null : roomGameState,
-    externalState: isSolo ? null : roomGameState,
-    onStateChange: isSolo
-      ? undefined
-      : (nextState) => {
-          void persistRoomState(nextState);
-        },
+    localPlayerId: user?.id ?? "human",
+    initialState: roomGameState,
+    externalState: roomGameState,
+    onStateChange: (nextState) => {
+      void persistRoomState(nextState);
+    },
   });
 
-  if (!profile || (!isSolo && !roomStarted && (loadingRoomData || joiningRoom || !resolvedRoomId))) {
+  if (!profile || (!roomStarted && (loadingRoomData || joiningRoom || !resolvedRoomId))) {
     return (
       <div className="min-h-screen flex items-center justify-center text-muted-foreground">
         Setting up the board…
@@ -358,7 +351,7 @@ export function GameSession({ roomId }: Props) {
     );
   }
 
-  if (!isSolo && !roomStarted) {
+  if (!roomStarted) {
     const takenByOthers = new Set(
       roomPlayers
         .filter((player) => player.player_id !== user?.id && player.avatar_id !== null)
@@ -497,11 +490,12 @@ export function GameSession({ roomId }: Props) {
   }
 
   const { state } = game;
-  const localPlayerId = isSolo ? "human" : (user?.id ?? "");
+  const localPlayerId = user?.id ?? "";
   const currentPlayer = state.players.find((player) => player.id === state.currentPlayerId);
   const isMyTurn = state.currentPlayerId === localPlayerId;
   const activeMcq = state.activeMcq;
   const activeCard = state.activeCard;
+  const lastMcqResult = state.lastMcqResult;
   const winner = state.winner;
 
   return (
@@ -511,7 +505,7 @@ export function GameSession({ roomId }: Props) {
         <div className="flex flex-col items-center text-center">
           <div className="flex items-center gap-2 text-sm font-medium">
             <Sparkles className="h-4 w-4 text-accent" />
-            {isSolo ? "Solo Practice" : `Room ${roomInfo?.code ?? resolvedRoomCode ?? roomId.slice(0, 8)}…`}
+            {`Room ${roomInfo?.code ?? resolvedRoomCode ?? roomId.slice(0, 8)}…`}
           </div>
           <div className="text-xs text-muted-foreground">
             {currentPlayer ? `${currentPlayer.name}'s turn` : "Waiting for turn state…"}
@@ -530,7 +524,7 @@ export function GameSession({ roomId }: Props) {
           <Card className="border-border/70 bg-card/90 p-4 shadow-soft">
             <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Match</div>
             <div className="mt-2 text-lg font-semibold">
-              {isSolo ? "Practice Room" : `Room ${roomInfo?.code ?? resolvedRoomCode ?? "…"}`}
+              {`Room ${roomInfo?.code ?? resolvedRoomCode ?? "…"}`}
             </div>
             <div className="mt-1 text-sm text-muted-foreground">
               {state.phase === "ended" && winner
@@ -551,6 +545,8 @@ export function GameSession({ roomId }: Props) {
               />
             ))}
           </div>
+
+          <PropertiesBreakdown state={state} />
         </aside>
 
         <section className="flex flex-col items-center gap-5">
@@ -609,6 +605,72 @@ export function GameSession({ roomId }: Props) {
                   </div>
                   
                 </>
+              ) : state.phase === "purchase" && state.pendingBuy ? (
+                <>
+                  <div>
+                    <div className="text-lg font-semibold">{state.pendingBuy.principle.name}</div>
+                    <div className="text-sm text-muted-foreground">
+                      Purchase unlocked after a correct answer.
+                    </div>
+                  </div>
+                  <div className="rounded-2xl border border-border/60 bg-secondary/50 p-4 text-sm leading-relaxed">
+                    Price ₹{state.pendingBuy.principle.price}. Base rent ₹
+                    {state.pendingBuy.principle.baseRent}. Layer cost ₹
+                    {state.pendingBuy.principle.layerCost}.
+                  </div>
+                  {lastMcqResult ? (
+                    <div className="rounded-2xl border border-border/60 bg-background p-4 text-sm leading-relaxed">
+                      <div className="font-medium">
+                        {lastMcqResult.wasCorrect ? "Correct" : "Incorrect"} — answer{" "}
+                        {lastMcqResult.correctAnswer}
+                      </div>
+                      {lastMcqResult.explanation ? (
+                        <div className="mt-2 text-muted-foreground">
+                          {lastMcqResult.explanation}
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button onClick={game.buyProperty} disabled={!isMyTurn} className="rounded-xl">
+                      Buy
+                    </Button>
+                    <Button
+                      onClick={game.skipPurchase}
+                      disabled={!isMyTurn}
+                      variant="secondary"
+                      className="rounded-xl"
+                    >
+                      Skip
+                    </Button>
+                  </div>
+                </>
+              ) : state.phase === "build" && state.pendingBuild ? (
+                <>
+                  <div>
+                    <div className="text-lg font-semibold">{state.pendingBuild.principle.name}</div>
+                    <div className="text-sm text-muted-foreground">
+                      Build one Compliance Layer on this tile.
+                    </div>
+                  </div>
+                  <div className="rounded-2xl border border-border/60 bg-secondary/50 p-4 text-sm leading-relaxed">
+                    Cost ₹{state.pendingBuild.principle.layerCost}. Layers must be built evenly
+                    across the color group.
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button onClick={game.buildLayer} disabled={!isMyTurn} className="rounded-xl">
+                      Build
+                    </Button>
+                    <Button
+                      onClick={game.skipBuild}
+                      disabled={!isMyTurn}
+                      variant="secondary"
+                      className="rounded-xl"
+                    >
+                      Skip
+                    </Button>
+                  </div>
+                </>
               ) : state.phase === "regulator" && activeCard ? (
                 <>
                   <div>
@@ -618,8 +680,71 @@ export function GameSession({ roomId }: Props) {
                   <div className="rounded-2xl border border-border/60 bg-secondary/50 p-4 text-sm leading-relaxed">
                     {activeCard.body}
                   </div>
-                  <Button onClick={game.acknowledgeCard} disabled={!isMyTurn} className="w-full rounded-xl">
+                  <Button
+                    onClick={() => game.acknowledgeCard()}
+                    disabled={!isMyTurn}
+                    className="w-full rounded-xl"
+                  >
                     Acknowledge event
+                  </Button>
+                </>
+              ) : state.phase === "turn_end" ? (
+                <>
+                  <div>
+                    <div className="text-lg font-semibold">Turn resolved</div>
+                    <div className="text-sm text-muted-foreground">
+                      {state.message || "Review the result, then end your turn."}
+                    </div>
+                  </div>
+                  {lastMcqResult ? (
+                    <div className="rounded-2xl border border-border/60 bg-secondary/50 p-4 text-sm leading-relaxed">
+                      <div className="font-medium">
+                        {lastMcqResult.principleName}:{" "}
+                        {lastMcqResult.wasCorrect ? "correct" : "incorrect"}
+                      </div>
+                      <div className="mt-1 text-muted-foreground">
+                        Your answer: {lastMcqResult.picked}. Correct answer:{" "}
+                        {lastMcqResult.correctAnswer}.
+                      </div>
+                      {lastMcqResult.explanation ? (
+                        <div className="mt-3 text-muted-foreground">
+                          {lastMcqResult.explanation}
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <div className="rounded-2xl border border-dashed border-border/60 bg-secondary/40 p-4 text-sm text-muted-foreground">
+                      {state.message}
+                    </div>
+                  )}
+                  {state.pendingSell ? (
+                    <div className="space-y-3 rounded-2xl border border-green-500/30 bg-green-50/20 p-4">
+                      <div className="text-sm leading-relaxed">
+                        <div className="font-semibold text-green-700">{state.pendingSell.principle.name}</div>
+                        <div className="text-green-600">Sell for ₹{state.pendingSell.principle.price}?</div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          onClick={game.sellProperty}
+                          disabled={!isMyTurn}
+                          variant="default"
+                          className="rounded-xl"
+                        >
+                          Sell
+                        </Button>
+                        <Button
+                          onClick={game.skipSell}
+                          disabled={!isMyTurn}
+                          variant="secondary"
+                          className="rounded-xl"
+                        >
+                          Keep
+                        </Button>
+                      </div>
+                    </div>
+                  ) : null}
+                  <Button onClick={game.endTurn} disabled={!isMyTurn} className="w-full rounded-xl">
+                    End Turn
                   </Button>
                 </>
               ) : state.phase === "ended" && winner ? (
@@ -631,22 +756,16 @@ export function GameSession({ roomId }: Props) {
                   <div className="rounded-2xl border border-border/60 bg-secondary/50 p-4 text-sm leading-relaxed">
                     The match has ended. Keep the tab open to review the board or use the lobby to create a new room.
                   </div>
-                  {isSolo ? (
-                    <Button onClick={game.reset} className="w-full rounded-xl">
-                      Play again
-                    </Button>
-                  ) : (
-                    <div className="text-sm text-muted-foreground">
-                      Ask the host to start a new room for another round.
-                    </div>
-                  )}
+                  <div className="text-sm text-muted-foreground">
+                    Ask the host to start a new room for another round.
+                  </div>
                 </>
               ) : (
                 <>
                   <div>
                     <div className="text-lg font-semibold">Turn ready</div>
                     <div className="text-sm text-muted-foreground">
-                      Roll from the center of the board. Prompts stay in this panel.
+                      {state.message || "Roll from the center of the board. Prompts stay in this panel."}
                     </div>
                   </div>
                   <div className="rounded-2xl border border-dashed border-border/60 bg-secondary/40 p-4 text-sm text-muted-foreground">
@@ -662,10 +781,11 @@ export function GameSession({ roomId }: Props) {
           <Card className="border-border/70 bg-card/90 p-4 shadow-soft">
             <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Rules</div>
             <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-              <li>• Roll once per turn.</li>
-              <li>• Principle tiles use inline questions.</li>
-              <li>• Regulator cards resolve in the action desk.</li>
-              <li>• No popups, no modal thrash.</li>
+              <li>• Roll one die each turn.</li>
+              <li>• Correct unowned-tile answers unlock buying.</li>
+              <li>• Correct opponent-tile answers avoid rent.</li>
+              <li>• In DPB Hearing, roll a 6 within three attempts or pay ₹50.</li>
+              <li>• Penalty tiles feed the Free Audit pot.</li>
             </ul>
           </Card>
         </aside>

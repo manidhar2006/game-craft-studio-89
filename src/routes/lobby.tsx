@@ -1,12 +1,12 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Dices, Users, LogOut, Sparkles, Plus, Hash } from "lucide-react";
+import { Users, LogOut, Sparkles, Plus, Hash } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { AVATARS, generateRoomCode, MAX_PLAYERS } from "@/lib/game/constants";
+import { generateRoomCode, MAX_PLAYERS } from "@/lib/game/constants";
 import { toast } from "sonner";
 
 function wait(ms: number) {
@@ -37,7 +37,6 @@ function LobbyPage() {
   const [joinCode, setJoinCode] = useState("");
   const [creating, setCreating] = useState(false);
   const [joining, setJoining] = useState(false);
-  const [pendingAction, setPendingAction] = useState<null | "solo">(null);
   const [showCreateRoomModal, setShowCreateRoomModal] = useState(false);
   const [selectedPlayerCount, setSelectedPlayerCount] = useState<2 | 3 | 4>(4);
 
@@ -57,18 +56,6 @@ function LobbyPage() {
       }
     })();
   }, [user]);
-
-  async function saveProfile() {
-    if (!user) return;
-    await supabase
-      .from("profiles")
-      .upsert({ id: user.id, display_name: displayName, avatar_id: avatarId });
-  }
-
-  async function startSolo() {
-    // open avatar selection first
-    setPendingAction("solo");
-  }
 
   async function createRoom(maxPlayers: 2 | 3 | 4) {
     if (!user) return;
@@ -201,18 +188,6 @@ function LobbyPage() {
     navigate({ to: "/game/$roomId", params: { roomId: room.id } });
   }
 
-  // actions executed after avatar is confirmed (solo only)
-  async function confirmPendingAction() {
-    if (!pendingAction || !user) return;
-    await saveProfile();
-
-    if (pendingAction === "solo") {
-      navigate({ to: "/game/$roomId", params: { roomId: "solo" } });
-    }
-
-    setPendingAction(null);
-  }
-
   return (
     <div className="min-h-screen bg-background">
       <header className="flex items-center justify-between px-6 py-5 md:px-10 border-b border-border/60">
@@ -231,54 +206,7 @@ function LobbyPage() {
         <h1 className="text-3xl md:text-4xl font-semibold tracking-tight">Lobby</h1>
         <p className="mt-2 text-muted-foreground">Choose a mode to start</p>
 
-        {/* Avatar confirmation modal shown after choosing a game mode */}
-        {pendingAction && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-            <Card className="w-full max-w-md p-6">
-              <h3 className="text-lg font-semibold">Confirm your avatar</h3>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Select an avatar and confirm to proceed.
-              </p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {AVATARS.map((a) => (
-                  <button
-                    key={a.id}
-                    type="button"
-                    onClick={() => setAvatarId(a.id)}
-                    className={`flex h-12 w-12 items-center justify-center rounded-full text-2xl transition-all ${
-                      avatarId === a.id
-                        ? "ring-2 ring-primary ring-offset-2 ring-offset-background scale-110"
-                        : "opacity-70 hover:opacity-100"
-                    }`}
-                    style={{ backgroundColor: a.color, color: "white" }}
-                    aria-label={a.name}
-                  >
-                    {a.emoji}
-                  </button>
-                ))}
-              </div>
-              <div className="mt-6 flex justify-end gap-2">
-                <Button variant="ghost" onClick={() => setPendingAction(null)}>
-                  Cancel
-                </Button>
-                <Button onClick={confirmPendingAction}>Confirm</Button>
-              </div>
-            </Card>
-          </div>
-        )}
-
-        <div className="mt-8 grid gap-6 md:grid-cols-3">
-          <Card className="p-6 flex flex-col">
-            <Dices className="h-7 w-7 text-primary" />
-            <h3 className="mt-4 text-lg font-semibold">Solo Practice</h3>
-            <p className="mt-1 text-sm text-muted-foreground flex-1">
-              Play vs computer. Learn the principles at your pace.
-            </p>
-            <Button className="mt-4" onClick={startSolo}>
-              Play Solo
-            </Button>
-          </Card>
-
+        <div className="mt-8 grid gap-6 md:grid-cols-2">
           <Card className="p-6 flex flex-col">
             <Plus className="h-7 w-7 text-primary" />
             <h3 className="mt-4 text-lg font-semibold">Create Room</h3>

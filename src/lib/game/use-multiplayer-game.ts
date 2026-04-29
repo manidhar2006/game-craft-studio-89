@@ -71,6 +71,7 @@ export function buildInitialGameState(
     players,
     currentPlayerId: players[0]?.id ?? localPlayerId,
     propertyOwners: {},
+    rentOverrides: {},
     phase: "idle",
     lastRoll: null,
     message: localPlayer
@@ -86,6 +87,7 @@ export function buildInitialGameState(
     pendingRent: null,
     pendingOwn: null,
     pendingBuild: null,
+    pendingSell: null,
   };
 }
 
@@ -103,7 +105,13 @@ function ownsGroup(state: GameState, playerId: string, group: ColorGroup) {
   );
 }
 
-function rentFor(state: GameState, principle: PrincipleConfig, ownerId: string) {
+function rentFor(state: GameState, principle: PrincipleConfig, ownerId: string, payerId?: string) {
+  // Check if there's a player-specific rent override (from failed own_tile MCQs)
+  // The override is stored per property per owner (not per payer)
+  if (state.rentOverrides?.[principle.principleNo]?.[ownerId] !== undefined) {
+    return state.rentOverrides[principle.principleNo][ownerId];
+  }
+
   const owner = state.players.find((player) => player.id === ownerId);
   const layers = owner?.layers[principle.principleNo] ?? 0;
   if (layers === 1) return principle.layer1Rent;
@@ -198,6 +206,7 @@ function normalizeState(state: GameState): GameState {
     usedQuestionIds: state.usedQuestionIds ?? [],
     lastMcqResult: state.lastMcqResult ?? null,
     pendingBuild: state.pendingBuild ?? null,
+    rentOverrides: state.rentOverrides ?? {},
   };
 }
 
@@ -244,6 +253,18 @@ export function useMultiplayerGame({
     if (!enabled || !externalState) return;
     const normalizedExternalState = normalizeState(externalState);
     const externalSignature = serializeState(normalizedExternalState);
+    const liveState = stateRef.current;
+    const isLocalTurnActive =
+      !!liveState &&
+      liveState.currentPlayerId === localPlayerId &&
+      liveState.phase !== "idle" &&
+      liveState.phase !== "ended";
+
+    // Ignore stale remote snapshots while this client is actively resolving its own turn.
+    if (isLocalTurnActive && externalSignature !== stateSignatureRef.current) {
+      return;
+    }
+
     if (
       externalSignature === stateSignatureRef.current ||
       externalSignature === lastAppliedExternalSignatureRef.current
@@ -253,7 +274,7 @@ export function useMultiplayerGame({
     applyingExternalRef.current = true;
     lastAppliedExternalSignatureRef.current = externalSignature;
     setState(normalizedExternalState);
-  }, [enabled, externalState, serializeState]);
+  }, [enabled, externalState, localPlayerId, serializeState]);
 
   useEffect(() => {
     if (!state || !onStateChange) return;
@@ -372,7 +393,7 @@ export function useMultiplayerGame({
     const owner = stateToUpdate.players.find((player) => player.id === ownerId);
     if (!payer || !owner) return stateToUpdate;
 
-    const rent = owner.inJail ? 0 : rentFor(stateToUpdate, principle, ownerId);
+    const rent = owner.inJail ? 0 : rentFor(stateToUpdate, principle, ownerId, payerId);
     const amountToOwner = Math.min(rent, Math.max(0, payer.credits));
     const players = stateToUpdate.players.map((player) => {
       if (player.id === payerId) return { ...player, credits: player.credits - rent };
@@ -474,7 +495,37 @@ export function useMultiplayerGame({
         }
 
         if (ownerId === player.id) {
-          if (isLocalTurn && canBuildLayer(stateRef.current!, player.id, principle)) {
+          // Trigger MCQ for owned tile negotiation
+          if (isLocalTurn) {
+            const question = fetchQuestion(principle.principleNo);
+            if (question) {
+              setState((currentState) =>
+                currentState
+                  ? {
+                      ...currentState,
+                      phase: "mcq",
+                      activeMcq: {
+                        question,
+                        principleNo: principle.principleNo,
+                        principleName: principle.name,
+                        mode: "own_tile",
+                      },
+                      lastMcqResult: null,
+                      pendingSell: { principle, ownerId: player.id },
+                      pendingBuy: null,
+                      pendingRent: null,
+                      pendingOwn: null,
+                      pendingBuild: null,
+                      message: `You own ${principle.name}. Answer correctly to have a chance to sell, or wrong answer decreases rent.`,
+                    }
+                  : currentState,
+              );
+              return;
+            }
+          }
+
+          // Auto-pass for non-local turns or no question available
+          if (canBuildLayer(stateRef.current!, player.id, principle)) {
             setState((currentState) =>
               currentState
                 ? {
@@ -484,46 +535,27 @@ export function useMultiplayerGame({
                     pendingBuy: null,
                     pendingRent: null,
                     pendingOwn: null,
+                    pendingSell: null,
                     message: `You may build one Compliance Layer on ${principle.name}.`,
                   }
                 : currentState,
             );
+            completeTurn(isLocalTurn, 600);
             return;
           }
 
-          setState((currentState) => {
-            if (!currentState) return currentState;
-            if (!canBuildLayer(currentState, player.id, principle)) {
-              return {
-                ...currentState,
-                phase: "turn_end",
-                message: `${player.name} revisits ${principle.name}.`,
-              };
-            }
-            const currentLayers =
-              currentState.players.find((candidate) => candidate.id === player.id)?.layers[
-                principle.principleNo
-              ] ?? 0;
-            const players = currentState.players.map((candidate) =>
-              candidate.id === player.id
-                ? {
-                    ...candidate,
-                    credits: candidate.credits - principle.layerCost,
-                    layers: {
-                      ...candidate.layers,
-                      [principle.principleNo]: currentLayers + 1,
-                    },
-                  }
-                : candidate,
-            );
-            return {
-              ...currentState,
-              players,
-              phase: "turn_end",
-              message: `${player.name} built a Compliance Layer on ${principle.name}.`,
-            };
-          });
-          completeTurn(isLocalTurn, 900);
+          setState((currentState) =>
+            currentState
+              ? {
+                  ...currentState,
+                  phase: "turn_end",
+                  pendingBuild: null,
+                  pendingSell: null,
+                  message: `${player.name} revisits ${principle.name}.`,
+                }
+              : currentState,
+          );
+          completeTurn(isLocalTurn, 600);
           return;
         }
 
@@ -666,6 +698,8 @@ export function useMultiplayerGame({
 
   const movePlayer = useCallback(
     (playerId: string, steps: number) => {
+      let landedSnapshot: Player | null = null;
+
       setState((currentState) => {
         if (!currentState) return currentState;
         const players = currentState.players.map((player) => {
@@ -673,19 +707,22 @@ export function useMultiplayerGame({
           const rawPosition = player.position + steps;
           const position = rawPosition % currentState.board.length;
           const passedStart = rawPosition >= currentState.board.length;
-          return {
+          const updatedPlayer = {
             ...player,
             position,
             credits: passedStart ? player.credits + PASS_START_BONUS : player.credits,
           };
+          landedSnapshot = updatedPlayer;
+          return updatedPlayer;
         });
         return { ...currentState, players, phase: "moving" };
       });
 
       const delay = Math.max(600, steps * 140 + 300);
       setTimeout(() => {
-        const currentPlayer = stateRef.current?.players.find((player) => player.id === playerId);
-        if (currentPlayer) settleLanding(currentPlayer);
+        if (landedSnapshot) {
+          settleLanding(landedSnapshot);
+        }
       }, delay);
     },
     [settleLanding],
@@ -849,6 +886,70 @@ export function useMultiplayerGame({
           };
         }
 
+        if (stateToUpdate.pendingSell) {
+          const { principle, ownerId } = stateToUpdate.pendingSell;
+          if (isCorrect) {
+            // Player answered correctly - unlock sell option
+            return {
+              ...stateToUpdate,
+              usedQuestionIds,
+              phase: "turn_end",
+              activeMcq: null,
+              lastMcqResult,
+              pendingSell: { principle, ownerId },
+              message: `Correct! You may sell ${principle.name} for ₹${principle.price}. Would you like to sell?`,
+            };
+          }
+
+          // Wrong answer - decrease rent by 50%
+          const currentRent = stateToUpdate.rentOverrides?.[principle.principleNo]?.[ownerId];
+          let newRent = currentRent !== undefined ? currentRent : rentFor(stateToUpdate, principle, ownerId, ownerId);
+
+          // Reduce rent by 50% each wrong answer
+          const nextRent = Math.floor(newRent / 2);
+
+          // Check if rent reached zero - lose ownership
+          if (nextRent === 0) {
+            const propertyOwners = { ...stateToUpdate.propertyOwners };
+            delete propertyOwners[principle.principleNo];
+            const rentOverrides = { ...stateToUpdate.rentOverrides };
+            if (rentOverrides[principle.principleNo]) {
+              delete rentOverrides[principle.principleNo][ownerId];
+            }
+            return {
+              ...stateToUpdate,
+              usedQuestionIds,
+              phase: "turn_end",
+              activeMcq: null,
+              lastMcqResult,
+              pendingSell: null,
+              propertyOwners,
+              rentOverrides,
+              message: `Incorrect. Rent on ${principle.name} reached zero. You lost ownership!`,
+            };
+          }
+
+          // Update rent override
+          const rentOverrides = {
+            ...stateToUpdate.rentOverrides,
+            [principle.principleNo]: {
+              ...(stateToUpdate.rentOverrides?.[principle.principleNo] ?? {}),
+              [ownerId]: nextRent,
+            },
+          };
+
+          return {
+            ...stateToUpdate,
+            usedQuestionIds,
+            phase: "turn_end",
+            activeMcq: null,
+            lastMcqResult,
+            pendingSell: null,
+            rentOverrides,
+            message: `Incorrect. Rent on ${principle.name} reduced from ₹${newRent} to ₹${nextRent}.`,
+          };
+        }
+
         if (stateToUpdate.pendingRent) {
           const { principle, ownerId } = stateToUpdate.pendingRent;
           if (isCorrect) {
@@ -882,6 +983,7 @@ export function useMultiplayerGame({
           pendingBuy: null,
           pendingRent: null,
           pendingOwn: null,
+          pendingSell: null,
         };
       });
     },
@@ -917,6 +1019,59 @@ export function useMultiplayerGame({
         message: `${buyer.name} acquired ${principle.name}.`,
       };
     });
+  }, [localPlayerId]);
+
+  const sellProperty = useCallback(() => {
+    const currentState = stateRef.current;
+    if (!currentState || currentState.currentPlayerId !== localPlayerId || currentState.phase !== "turn_end")
+      return;
+
+    setState((stateToUpdate) => {
+      if (!stateToUpdate?.pendingSell) return stateToUpdate;
+      const { principle, ownerId } = stateToUpdate.pendingSell;
+      const seller = stateToUpdate.players.find((player) => player.id === ownerId);
+      if (!seller) return stateToUpdate;
+
+      const propertyOwners = { ...stateToUpdate.propertyOwners };
+      delete propertyOwners[principle.principleNo];
+
+      // Clear rent overrides for this property
+      const rentOverrides = { ...stateToUpdate.rentOverrides };
+      if (rentOverrides[principle.principleNo]) {
+        delete rentOverrides[principle.principleNo];
+      }
+
+      const players = stateToUpdate.players.map((player) =>
+        player.id === seller.id
+          ? { ...player, credits: player.credits + principle.price }
+          : player,
+      );
+
+      return {
+        ...stateToUpdate,
+        players,
+        propertyOwners,
+        rentOverrides,
+        phase: "turn_end",
+        pendingSell: null,
+        message: `${seller.name} sold ${principle.name} for ₹${principle.price}.`,
+      };
+    });
+  }, [localPlayerId]);
+
+  const skipSell = useCallback(() => {
+    const currentState = stateRef.current;
+    if (!currentState || currentState.currentPlayerId !== localPlayerId || currentState.phase !== "turn_end")
+      return;
+    setState((stateToUpdate) =>
+      stateToUpdate?.pendingSell
+        ? {
+            ...stateToUpdate,
+            pendingSell: null,
+            message: `${stateToUpdate.pendingSell.principle.name} remains owned.`,
+          }
+        : stateToUpdate,
+    );
   }, [localPlayerId]);
 
   const skipPurchase = useCallback(() => {
@@ -1121,6 +1276,8 @@ export function useMultiplayerGame({
     acknowledgeCard: applyRegulatorCard,
     buyProperty,
     skipPurchase,
+    sellProperty,
+    skipSell,
     buildLayer,
     skipBuild,
     endTurn,
