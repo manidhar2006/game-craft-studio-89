@@ -13,6 +13,7 @@ import { EndScreen } from "./EndScreen";
 import { HudCard } from "./board3d/HudCard";
 import { PLAYER_TOKEN_COLORS } from "./board3d/boardLayout";
 import { useMultiplayerGame } from "@/lib/game/use-multiplayer-game";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { AVATARS } from "@/lib/game/constants";
 
 const LOCAL_PLAYER_ID = "you";
@@ -75,7 +76,7 @@ export function SoloGame({ displayName, avatarId, cpuCount }: Props) {
   const winner = state.winner;
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,oklch(0.14_0.03_270),oklch(0.06_0.015_270))] text-foreground">
+    <div className="min-h-screen bg-gradient-board text-foreground">
       <header className="flex items-center justify-between border-b border-border/40 bg-background/60 px-6 py-4 backdrop-blur">
         <Button size="sm" variant="ghost" onClick={() => navigate({ to: "/" })}>
           Leave
@@ -96,7 +97,7 @@ export function SoloGame({ displayName, avatarId, cpuCount }: Props) {
             DPDP Compliance Quest
           </div>
         </div>
-        <div className="w-[60px]" />
+        <ThemeToggle />
       </header>
 
       <main className="mx-auto grid max-w-[1600px] gap-6 px-4 py-6 lg:grid-cols-[280px_minmax(0,1fr)_340px] lg:px-6 lg:py-8">

@@ -10,12 +10,10 @@
  * The @theme inline block maps CSS custom properties to Tailwind utility
  * classes (e.g. --color-primary -> bg-primary, text-primary).
  *
- * The :root and .dark blocks define the actual color values using oklch.
+ * Default theme (in :root) is the dark neon-cyberpunk palette. The .light
+ * class on <html> overrides those variables with the light palette. The
+ * theme is toggled at runtime by ThemeProvider in src/lib/theme-context.tsx.
  * All colors MUST use oklch format.
- *
- * To add a new semantic color:
- * 1. Add the variable to :root (light value) and .dark (dark value)
- * 2. Register it in @theme inline as --color-<name>: var(--<name>)
  */
 
 @theme inline {
@@ -126,61 +124,51 @@
   --sidebar-ring: oklch(0.704 0.04 256.788);
 }
 
-.dark {
-  --background: oklch(0.18 0.02 165);
-  --foreground: oklch(0.95 0.01 95);
-  --card: oklch(0.22 0.025 165);
-  --card-foreground: oklch(0.95 0.01 95);
-  --popover: oklch(0.22 0.025 165);
-  --popover-foreground: oklch(0.95 0.01 95);
-  --primary: oklch(0.65 0.1 160);
-  --primary-foreground: oklch(0.18 0.02 165);
-  --primary-glow: oklch(0.7 0.11 160);
-  --secondary: oklch(0.28 0.03 165);
-  --secondary-foreground: oklch(0.95 0.01 95);
-  --muted: oklch(0.28 0.03 165);
-  --muted-foreground: oklch(0.7 0.02 95);
-  --accent: oklch(0.78 0.13 75);
-  --accent-foreground: oklch(0.2 0.03 165);
-  --destructive: oklch(0.65 0.18 28);
-  --destructive-foreground: oklch(0.98 0.01 95);
-  --border: oklch(1 0 0 / 8%);
-  --input: oklch(1 0 0 / 12%);
-  --ring: oklch(0.65 0.1 160);
-}
+.light {
+  /* Light counterpart — same neon hues, darker saturation, on bright surfaces */
+  --background: oklch(0.985 0.005 240);
+  --foreground: oklch(0.18 0.03 270);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.18 0.03 270);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.18 0.03 270);
 
-.dark-unused {
-  --foreground: oklch(0.984 0.003 247.858);
-  --card: oklch(0.208 0.042 265.755);
-  --card-foreground: oklch(0.984 0.003 247.858);
-  --popover: oklch(0.208 0.042 265.755);
-  --popover-foreground: oklch(0.984 0.003 247.858);
-  --primary: oklch(0.929 0.013 255.508);
-  --primary-foreground: oklch(0.208 0.042 265.755);
-  --secondary: oklch(0.279 0.041 260.031);
-  --secondary-foreground: oklch(0.984 0.003 247.858);
-  --muted: oklch(0.279 0.041 260.031);
-  --muted-foreground: oklch(0.704 0.04 256.788);
-  --accent: oklch(0.279 0.041 260.031);
-  --accent-foreground: oklch(0.984 0.003 247.858);
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.984 0.003 247.858);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.551 0.027 264.364);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.208 0.042 265.755);
-  --sidebar-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.279 0.041 260.031);
-  --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.551 0.027 264.364);
+  --primary: oklch(0.55 0.16 195);
+  --primary-foreground: oklch(0.985 0.005 240);
+  --primary-glow: oklch(0.65 0.18 195);
+
+  --secondary: oklch(0.95 0.015 240);
+  --secondary-foreground: oklch(0.20 0.03 270);
+
+  --muted: oklch(0.94 0.012 240);
+  --muted-foreground: oklch(0.45 0.04 250);
+
+  --accent: oklch(0.55 0.22 320);
+  --accent-foreground: oklch(0.985 0.005 240);
+
+  --destructive: oklch(0.55 0.22 18);
+  --destructive-foreground: oklch(0.985 0.005 240);
+
+  --border: oklch(0.85 0.015 250 / 0.8);
+  --input: oklch(0.92 0.012 250);
+  --ring: oklch(0.55 0.16 195);
+
+  --group-saffron: oklch(0.75 0.18 60);
+  --group-white: oklch(0.85 0.01 100);
+  --group-green: oklch(0.65 0.21 145);
+  --group-navy: oklch(0.50 0.20 250);
+
+  --tile-surface: oklch(1 0 0);
+  --board-bg: oklch(0.97 0.008 240);
+  --board-felt: oklch(0.94 0.012 240);
+
+  --gradient-hero: linear-gradient(135deg, oklch(0.55 0.22 320), oklch(0.55 0.16 195));
+  --gradient-board: radial-gradient(ellipse at center, oklch(0.985 0.005 240), oklch(0.93 0.012 240));
+  --gradient-gold: linear-gradient(135deg, oklch(0.55 0.16 195), oklch(0.55 0.22 320));
+
+  --shadow-soft: 0 1px 2px oklch(0.18 0.03 270 / 0.06), 0 8px 24px oklch(0.55 0.16 195 / 0.10);
+  --shadow-tile: 0 2px 0 oklch(0.18 0.03 270 / 0.08), 0 6px 16px oklch(0.55 0.16 195 / 0.12);
+  --shadow-glow: 0 0 0 3px oklch(0.55 0.16 195 / 0.25), 0 0 30px oklch(0.55 0.16 195 / 0.30);
 }
 
 @layer base {
@@ -196,6 +184,12 @@
       radial-gradient(circle at 10% 0%, oklch(0.42 0.07 165 / 0.04), transparent 40%),
       radial-gradient(circle at 90% 100%, oklch(0.78 0.12 75 / 0.05), transparent 40%);
     min-height: 100vh;
+  }
+
+  html.light body {
+    background-image:
+      radial-gradient(circle at 10% 0%, oklch(0.55 0.16 195 / 0.06), transparent 40%),
+      radial-gradient(circle at 90% 100%, oklch(0.55 0.22 320 / 0.05), transparent 40%);
   }
 }
 

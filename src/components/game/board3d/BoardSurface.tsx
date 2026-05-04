@@ -1,15 +1,19 @@
-import { BOARD_HALF, BOARD_THICKNESS, TILE_SIZE } from "./boardLayout";
+import { BOARD_HALF, BOARD_THICKNESS, TILE_SIZE, type BoardPalette } from "./boardLayout";
 
 const BOARD_OUTER = (BOARD_HALF + TILE_SIZE / 2) * 2 + 0.6;
 const BOARD_INNER_HOLLOW = BOARD_HALF * 2 - TILE_SIZE * 0.5;
 
-export function BoardSurface() {
+interface Props {
+  palette: BoardPalette;
+}
+
+export function BoardSurface({ palette }: Props) {
   return (
     <group>
       {/* Main raised plate (the physical board) */}
       <mesh position={[0, -BOARD_THICKNESS / 2, 0]} receiveShadow castShadow>
         <boxGeometry args={[BOARD_OUTER, BOARD_THICKNESS, BOARD_OUTER]} />
-        <meshStandardMaterial color="#0a0d18" metalness={0.55} roughness={0.45} />
+        <meshStandardMaterial color={palette.plate} metalness={0.55} roughness={0.45} />
       </mesh>
 
       {/* Outer neon frame — sits flat on top of the plate, around the tiles */}
@@ -27,10 +31,10 @@ export function BoardSurface() {
         <meshBasicMaterial color="#3affd9" toneMapped={false} />
       </mesh>
 
-      {/* Inner felt — a slightly raised dark inset inside the tile ring */}
+      {/* Inner felt — a slightly raised inset inside the tile ring */}
       <mesh position={[0, 0.003, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[BOARD_INNER_HOLLOW, BOARD_INNER_HOLLOW]} />
-        <meshStandardMaterial color="#06080f" metalness={0.4} roughness={0.7} />
+        <meshStandardMaterial color={palette.felt} metalness={0.4} roughness={0.7} />
       </mesh>
 
       {/* Inner neon trim around the felt */}
@@ -44,7 +48,7 @@ export function BoardSurface() {
       {/* Center pad — circular glow under the dice */}
       <mesh position={[0, 0.014, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <circleGeometry args={[1.0, 64]} />
-        <meshBasicMaterial color="#1a0535" transparent opacity={0.9} toneMapped={false} />
+        <meshBasicMaterial color={palette.centerPad} transparent opacity={0.9} toneMapped={false} />
       </mesh>
       <mesh position={[0, 0.016, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[0.92, 1.0, 64]} />

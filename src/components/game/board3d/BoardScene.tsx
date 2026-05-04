@@ -2,12 +2,13 @@ import { Suspense, type ReactNode } from "react";
 import { Canvas } from "@react-three/fiber";
 import type { BoardTile } from "@/lib/game/constants";
 import type { Player } from "@/lib/game/engine-types";
+import { useTheme } from "@/lib/theme-context";
 import { BoardSurface } from "./BoardSurface";
 import { Tile3D } from "./Tile3D";
 import { CameraRig } from "./CameraRig";
 import { PlayerToken3D } from "./PlayerToken3D";
 import { Dice3D } from "./Dice3D";
-import { PLAYER_TOKEN_COLORS } from "./boardLayout";
+import { PLAYER_TOKEN_COLORS, getBoardPalette } from "./boardLayout";
 
 interface Props {
   tiles: BoardTile[];
@@ -37,22 +38,28 @@ export function BoardScene({
   diceRolling = false,
   diceValue = null,
 }: Props) {
+  const { theme } = useTheme();
+  const palette = getBoardPalette(theme);
+
   const playerColorMap = new Map<string, string>();
   players.forEach((p, idx) => {
     playerColorMap.set(p.id, PLAYER_TOKEN_COLORS[idx % PLAYER_TOKEN_COLORS.length]);
   });
 
   return (
-    <div className="relative aspect-square w-full max-w-[820px] overflow-hidden rounded-2xl border border-[#3affd9]/20 bg-[#04050b]">
+    <div
+      className="relative aspect-square w-full max-w-[820px] overflow-hidden rounded-2xl border border-[#3affd9]/20"
+      style={{ backgroundColor: palette.containerBg }}
+    >
       <Canvas
         shadows
         dpr={[1, 2]}
         camera={{ position: [0, 9.5, 8.5], fov: 32 }}
         gl={{ antialias: true, alpha: false }}
       >
-        <color attach="background" args={["#04050b"]} />
+        <color attach="background" args={[palette.sceneBg]} />
 
-        <ambientLight intensity={0.6} />
+        <ambientLight intensity={palette.ambientIntensity} />
         <directionalLight
           position={[6, 10, 4]}
           intensity={1.2}
@@ -65,7 +72,7 @@ export function BoardScene({
         <pointLight position={[6, 3, 6]} intensity={0.5} color="#ff3aff" />
 
         <Suspense fallback={null}>
-          <BoardSurface />
+          <BoardSurface palette={palette} />
 
           {tiles.map((tile) => {
             const isPrinciple = tile.type === "principle";
@@ -80,6 +87,7 @@ export function BoardScene({
                 tile={tile}
                 ownerColor={ownerColor}
                 layers={layers}
+                palette={palette}
               />
             );
           })}
@@ -102,6 +110,7 @@ export function BoardScene({
             value={diceValue}
             position={[0, 0.7, 0]}
             accent="#3affd9"
+            bodyColor={palette.diceBody}
           />
         </Suspense>
 

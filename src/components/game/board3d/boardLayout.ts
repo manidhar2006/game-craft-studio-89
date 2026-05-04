@@ -66,3 +66,49 @@ export const TILE_TYPE_COLOR: Record<string, string> = {
 };
 
 export const PLAYER_TOKEN_COLORS = ["#ff5a2c", "#1ea7ff", "#3affa1", "#ffd23a", "#c2b3ff"];
+
+export interface BoardPalette {
+  containerBg: string;
+  sceneBg: string;
+  plate: string;
+  felt: string;
+  centerPad: string;
+  tileBody: string;
+  tileBodyHighlighted: string;
+  diceBody: string;
+  labelColor: string;
+  labelShadow: (accent: string) => string;
+  ambientIntensity: number;
+}
+
+export const DARK_BOARD_PALETTE: BoardPalette = {
+  containerBg: "#04050b",
+  sceneBg: "#04050b",
+  plate: "#0a0d18",
+  felt: "#06080f",
+  centerPad: "#1a0535",
+  tileBody: "#141729",
+  tileBodyHighlighted: "#1c2042",
+  diceBody: "#0c1024",
+  labelColor: "#ffffff",
+  labelShadow: (accent) => `0 0 6px ${accent}, 0 0 2px rgba(0,0,0,0.95)`,
+  ambientIntensity: 0.6,
+};
+
+export const LIGHT_BOARD_PALETTE: BoardPalette = {
+  containerBg: "#eef1f7",
+  sceneBg: "#eef1f7",
+  plate: "#d6dbe6",
+  felt: "#e2e6f1",
+  centerPad: "#f3eaff",
+  tileBody: "#f7f9fd",
+  tileBodyHighlighted: "#e8efff",
+  diceBody: "#dde2ec",
+  labelColor: "#0e1424",
+  labelShadow: (accent) => `0 0 6px ${accent}, 0 0 2px rgba(255,255,255,0.95)`,
+  ambientIntensity: 0.95,
+};
+
+export function getBoardPalette(theme: "dark" | "light"): BoardPalette {
+  return theme === "light" ? LIGHT_BOARD_PALETTE : DARK_BOARD_PALETTE;
+}

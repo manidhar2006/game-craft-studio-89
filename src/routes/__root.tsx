@@ -1,8 +1,10 @@
 import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
 
 import appCss from "../styles.css?url";
-import { AuthProvider } from "@/lib/auth-context";
 import { Toaster } from "@/components/ui/sonner";
+import { ThemeProvider } from "@/lib/theme-context";
+
+const NO_FLASH_THEME_SCRIPT = `(function(){try{var t=localStorage.getItem('dataviz:theme');if(t==='light'){document.documentElement.classList.add('light');}}catch(e){}})();`;
 
 function NotFoundComponent() {
   return (
@@ -49,6 +51,7 @@ export const Route = createRootRoute({
       { name: "twitter:site", content: "@Lovable" },
     ],
     links: [
+      { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
       {
         rel: "stylesheet",
         href: appCss,
@@ -71,6 +74,7 @@ function RootShell({ children }: { children: React.ReactNode }) {
     <html lang="en" suppressHydrationWarning={true}>
       <head>
         <HeadContent />
+        <script dangerouslySetInnerHTML={{ __html: NO_FLASH_THEME_SCRIPT }} />
       </head>
       <body suppressHydrationWarning={true}>
         {children}
@@ -82,9 +86,9 @@ function RootShell({ children }: { children: React.ReactNode }) {
 
 function RootComponent() {
   return (
-    <AuthProvider>
+    <ThemeProvider>
       <Outlet />
       <Toaster position="top-center" richColors closeButton />
-    </AuthProvider>
+    </ThemeProvider>
   );
 }

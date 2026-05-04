@@ -7,6 +7,7 @@ import {
   TILE_THICKNESS,
   TILE_TYPE_COLOR,
   getTileWorldPos,
+  type BoardPalette,
 } from "./boardLayout";
 
 interface Props {
@@ -14,6 +15,7 @@ interface Props {
   ownerColor?: string;
   layers: number;
   highlighted?: boolean;
+  palette: BoardPalette;
 }
 
 const TILE_DEPTH = TILE_SIZE * 0.96;
@@ -22,7 +24,7 @@ const TILE_TOP_Y = TILE_THICKNESS;
 const STRIPE_HEIGHT = 0.05;
 const STRIPE_THICKNESS = TILE_DEPTH * 0.18;
 
-export function Tile3D({ tile, ownerColor, layers, highlighted }: Props) {
+export function Tile3D({ tile, ownerColor, layers, highlighted, palette }: Props) {
   const { x, z, side, corner } = getTileWorldPos(tile.index);
 
   const baseColor = useMemo(() => {
@@ -41,11 +43,11 @@ export function Tile3D({ tile, ownerColor, layers, highlighted }: Props) {
 
   return (
     <group position={[x, 0, z]}>
-      {/* Tile body — raised dark panel */}
+      {/* Tile body — raised panel */}
       <mesh receiveShadow castShadow position={[0, TILE_THICKNESS / 2, 0]}>
         <boxGeometry args={[TILE_WIDTH, TILE_THICKNESS, TILE_DEPTH]} />
         <meshStandardMaterial
-          color={highlighted ? "#1c2042" : "#141729"}
+          color={highlighted ? palette.tileBodyHighlighted : palette.tileBody}
           metalness={0.3}
           roughness={0.55}
           emissive={highlighted ? baseColor : "#000000"}
@@ -132,8 +134,8 @@ export function Tile3D({ tile, ownerColor, layers, highlighted }: Props) {
         <div
           className="select-none text-center whitespace-nowrap"
           style={{
-            color: "white",
-            textShadow: `0 0 6px ${baseColor}, 0 0 2px rgba(0,0,0,0.95)`,
+            color: palette.labelColor,
+            textShadow: palette.labelShadow(baseColor),
           }}
         >
           <div

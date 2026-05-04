@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { SoloGame } from "@/components/game/SoloGame";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { AVATARS } from "@/lib/game/constants";
 
 export const Route = createFileRoute("/play")({
@@ -46,7 +47,7 @@ function PlayPage() {
           <Sparkles className="h-4 w-4 text-accent" />
           Data Viz
         </div>
-        <div className="w-12" />
+        <ThemeToggle />
       </header>
 
       <main className="mx-auto max-w-2xl px-6 py-10 md:py-16">

@@ -1,12 +1,13 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Users, LogOut, Sparkles, Plus, Hash } from "lucide-react";
-import { useAuth } from "@/lib/auth-context";
+import { Users, Sparkles, Plus, Hash } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { generateRoomCode, MAX_PLAYERS } from "@/lib/game/constants";
+import { getSessionId } from "@/lib/session-id";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { toast } from "sonner";
 
 function wait(ms: number) {
@@ -27,7 +28,6 @@ export const Route = createFileRoute("/lobby")({
 });
 
 function LobbyPage() {
-  const { user, isAnonymous, signOut, ensureSession } = useAuth();
   const navigate = useNavigate();
   const [displayName, setDisplayName] = useState("");
   const [joinCode, setJoinCode] = useState("");
@@ -37,25 +37,10 @@ function LobbyPage() {
   const [selectedPlayerCount, setSelectedPlayerCount] = useState<2 | 3 | 4>(4);
 
   useEffect(() => {
-    if (!user) return;
-    if (user.is_anonymous) {
-      const stored = typeof window !== "undefined" ? window.localStorage.getItem("dataviz:displayName") : null;
-      if (stored) setDisplayName(stored);
-      return;
-    }
-    (async () => {
-      const { data } = await supabase
-        .from("profiles")
-        .select("display_name, avatar_id")
-        .eq("id", user.id)
-        .maybeSingle();
-      if (data) {
-        setDisplayName(data.display_name ?? "");
-      } else {
-        setDisplayName(user.email?.split("@")[0] ?? "Player");
-      }
-    })();
-  }, [user]);
+    if (typeof window === "undefined") return;
+    const stored = window.localStorage.getItem("dataviz:displayName");
+    if (stored) setDisplayName(stored);
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined" || !displayName) return;
@@ -69,7 +54,7 @@ function LobbyPage() {
     }
     setCreating(true);
     try {
-      const sessionUser = await ensureSession();
+      const playerId = getSessionId();
       const code = generateRoomCode();
       let room: { id: string } | null = null;
       let error: unknown = null;
@@ -78,7 +63,7 @@ function LobbyPage() {
       for (let attempt = 0; attempt < 3; attempt += 1) {
         const result = await supabase
           .from("rooms")
-          .insert({ code, host_id: sessionUser.id, status: "waiting", max_players: maxPlayers })
+          .insert({ code, host_id: playerId, status: "waiting", max_players: maxPlayers })
           .select("id")
           .single();
         room = result.data as { id: string } | null;
@@ -97,10 +82,9 @@ function LobbyPage() {
         return;
       }
 
-      // add player without avatar; avatar selection happens inside the room
       const { error: rpError } = await supabase.from("room_players").insert({
         room_id: room.id,
-        player_id: sessionUser.id,
+        player_id: playerId,
         display_name: displayName,
         avatar_id: null,
         seat_order: 0,
@@ -130,8 +114,8 @@ function LobbyPage() {
     }
     setJoining(true);
     try {
-      const sessionUser = await ensureSession();
-      const code = joinCode.trim().toUpperCase();
+      const playerId = getSessionId();
+      const code = joinCode.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
       const { data: room, error: roomError } = await supabase
         .from("rooms")
         .select("id, max_players, status")
@@ -157,7 +141,7 @@ function LobbyPage() {
       const { error: joinError } = await supabase.from("room_players").upsert(
         {
           room_id: room.id,
-          player_id: sessionUser.id,
+          player_id: playerId,
           display_name: displayName,
           avatar_id: null,
           seat_order: 999,
@@ -185,7 +169,7 @@ function LobbyPage() {
           .from("room_players")
           .delete()
           .eq("room_id", room.id)
-          .eq("player_id", sessionUser.id);
+          .eq("player_id", playerId);
         toast.error("Room is full");
         setJoining(false);
         return;
@@ -193,7 +177,7 @@ function LobbyPage() {
 
       if (players) {
         const usedSeats = new Set(
-          players.filter((p) => p.player_id !== sessionUser.id).map((p) => p.seat_order),
+          players.filter((p) => p.player_id !== playerId).map((p) => p.seat_order),
         );
         let nextSeat = 0;
         while (usedSeats.has(nextSeat)) nextSeat += 1;
@@ -201,7 +185,7 @@ function LobbyPage() {
           .from("room_players")
           .update({ seat_order: nextSeat })
           .eq("room_id", room.id)
-          .eq("player_id", sessionUser.id);
+          .eq("player_id", playerId);
       }
       setJoining(false);
       navigate({ to: "/game/$roomId", params: { roomId: room.id } });
@@ -221,22 +205,14 @@ function LobbyPage() {
           </div>
           <span className="font-semibold tracking-tight">Data Viz</span>
         </Link>
-        {user && !isAnonymous ? (
-          <Button variant="ghost" size="sm" onClick={signOut}>
-            <LogOut className="mr-2 h-4 w-4" /> Sign out
-          </Button>
-        ) : (
-          <Link to="/auth" search={{ mode: "signup" }}>
-            <Button variant="ghost" size="sm">
-              Save progress
-            </Button>
-          </Link>
-        )}
+        <ThemeToggle />
       </header>
 
       <main className="mx-auto max-w-5xl px-6 py-10 md:py-14">
         <h1 className="text-3xl md:text-4xl font-semibold tracking-tight">Multiplayer Lobby</h1>
-        <p className="mt-2 text-muted-foreground">Pick a name, then create or join a room</p>
+        <p className="mt-2 text-muted-foreground">
+          Create a session to get a room ID, or join one with a code.
+        </p>
 
         <div className="mt-6 max-w-md">
           <Input
@@ -252,7 +228,7 @@ function LobbyPage() {
             <Plus className="h-7 w-7 text-primary" />
             <h3 className="mt-4 text-lg font-semibold">Create Room</h3>
             <p className="mt-1 text-sm text-muted-foreground flex-1">
-              Generate a code and invite up to 4 players.
+              Generate a room ID and share it to invite up to 4 players.
             </p>
             <Button
               className="mt-4"
@@ -267,10 +243,13 @@ function LobbyPage() {
             <Hash className="h-7 w-7 text-primary" />
             <h3 className="mt-4 text-lg font-semibold">Join Room</h3>
             <Input
-              placeholder="ABCD-EFGH-JKLM"
+              placeholder="ABC123"
               value={joinCode}
-              onChange={(e) => setJoinCode(e.target.value)}
-              className="mt-3 uppercase tracking-wider"
+              onChange={(e) =>
+                setJoinCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6))
+              }
+              maxLength={6}
+              className="mt-3 uppercase tracking-[0.3em]"
             />
             <Button
               className="mt-3"

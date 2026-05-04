@@ -12,7 +12,6 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as PlayRouteImport } from './routes/play'
 import { Route as LobbyRouteImport } from './routes/lobby'
 import { Route as HowItWorksRouteImport } from './routes/how-it-works'
-import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as GameRoomIdRouteImport } from './routes/game.$roomId'
 
@@ -31,11 +30,6 @@ const HowItWorksRoute = HowItWorksRouteImport.update({
   path: '/how-it-works',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthRoute = AuthRouteImport.update({
-  id: '/auth',
-  path: '/auth',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -49,7 +43,6 @@ const GameRoomIdRoute = GameRoomIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/auth': typeof AuthRoute
   '/how-it-works': typeof HowItWorksRoute
   '/lobby': typeof LobbyRoute
   '/play': typeof PlayRoute
@@ -57,7 +50,6 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/auth': typeof AuthRoute
   '/how-it-works': typeof HowItWorksRoute
   '/lobby': typeof LobbyRoute
   '/play': typeof PlayRoute
@@ -66,7 +58,6 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/auth': typeof AuthRoute
   '/how-it-works': typeof HowItWorksRoute
   '/lobby': typeof LobbyRoute
   '/play': typeof PlayRoute
@@ -74,28 +65,14 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths:
-    | '/'
-    | '/auth'
-    | '/how-it-works'
-    | '/lobby'
-    | '/play'
-    | '/game/$roomId'
+  fullPaths: '/' | '/how-it-works' | '/lobby' | '/play' | '/game/$roomId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/how-it-works' | '/lobby' | '/play' | '/game/$roomId'
-  id:
-    | '__root__'
-    | '/'
-    | '/auth'
-    | '/how-it-works'
-    | '/lobby'
-    | '/play'
-    | '/game/$roomId'
+  to: '/' | '/how-it-works' | '/lobby' | '/play' | '/game/$roomId'
+  id: '__root__' | '/' | '/how-it-works' | '/lobby' | '/play' | '/game/$roomId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AuthRoute: typeof AuthRoute
   HowItWorksRoute: typeof HowItWorksRoute
   LobbyRoute: typeof LobbyRoute
   PlayRoute: typeof PlayRoute
@@ -125,13 +102,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HowItWorksRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
@@ -151,7 +121,6 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AuthRoute: AuthRoute,
   HowItWorksRoute: HowItWorksRoute,
   LobbyRoute: LobbyRoute,
   PlayRoute: PlayRoute,

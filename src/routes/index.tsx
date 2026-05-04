@@ -1,14 +1,13 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Bot, Users, Hash, BookOpen, Sparkles } from "lucide-react";
-import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export const Route = createFileRoute("/")({
   component: LandingPage,
 });
 
 function LandingPage() {
-  const { user, isAnonymous, signOut, loading } = useAuth();
   const navigate = useNavigate();
 
   return (
@@ -20,20 +19,7 @@ function LandingPage() {
           </div>
           <span className="font-display text-lg font-semibold tracking-tight">Data Viz</span>
         </div>
-        <nav className="flex items-center gap-2">
-          {!loading &&
-            (user && !isAnonymous ? (
-              <Button variant="ghost" size="sm" className="rounded-full" onClick={signOut}>
-                Sign out
-              </Button>
-            ) : (
-              <Link to="/auth" search={{ mode: "signin" }}>
-                <Button variant="ghost" size="sm" className="rounded-full">
-                  Sign in
-                </Button>
-              </Link>
-            ))}
-        </nav>
+        <ThemeToggle />
       </header>
 
       <main className="relative mx-auto flex max-w-5xl flex-col items-center px-6 pb-20 pt-12 text-center md:pt-20">
@@ -59,23 +45,7 @@ function LandingPage() {
           actually want to play. No sign-up required.
         </p>
 
-        <div className="mt-10 grid w-full grid-cols-1 gap-4 sm:grid-cols-3">
-          <button
-            onClick={() => navigate({ to: "/play" })}
-            className="group flex flex-col items-start rounded-2xl border border-border bg-card/80 p-6 text-left shadow-soft backdrop-blur transition-all hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-lg"
-          >
-            <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-secondary text-primary">
-              <Sparkles className="h-5 w-5" />
-            </div>
-            <div className="font-display text-lg font-semibold">Play as Guest</div>
-            <div className="mt-1 text-sm text-muted-foreground">
-              Type a name and start instantly. No login needed.
-            </div>
-            <div className="mt-4 text-sm font-medium text-primary group-hover:underline">
-              Quick play →
-            </div>
-          </button>
-
+        <div className="mt-10 grid w-full grid-cols-1 gap-4 sm:grid-cols-2">
           <button
             onClick={() => navigate({ to: "/play" })}
             className="group flex flex-col items-start rounded-2xl border border-border bg-card/80 p-6 text-left shadow-soft backdrop-blur transition-all hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-lg"
@@ -101,7 +71,7 @@ function LandingPage() {
             </div>
             <div className="font-display text-lg font-semibold">Multiplayer</div>
             <div className="mt-1 text-sm text-muted-foreground">
-              Create a room or join with a code.
+              Create a session and share the room ID.
             </div>
             <div className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-primary group-hover:underline">
               <Hash className="h-3.5 w-3.5" />

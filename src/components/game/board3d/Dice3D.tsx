@@ -2,13 +2,14 @@ import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 
-// Rotation needed to bring each pip-value face to point UP (+Y)
+// Rotation needed to bring each pip-value face to point UP (+Y).
+// Face layout: top=1 (+Y), bottom=6 (-Y), front=2 (+Z), back=5 (-Z), right=3 (+X), left=4 (-X).
 const FACE_QUATERNIONS: Record<number, THREE.Euler> = {
   1: new THREE.Euler(0, 0, 0),
-  2: new THREE.Euler(Math.PI / 2, 0, 0),
-  3: new THREE.Euler(0, 0, -Math.PI / 2),
-  4: new THREE.Euler(0, 0, Math.PI / 2),
-  5: new THREE.Euler(-Math.PI / 2, 0, 0),
+  2: new THREE.Euler(-Math.PI / 2, 0, 0),
+  3: new THREE.Euler(0, 0, Math.PI / 2),
+  4: new THREE.Euler(0, 0, -Math.PI / 2),
+  5: new THREE.Euler(Math.PI / 2, 0, 0),
   6: new THREE.Euler(Math.PI, 0, 0),
 };
 
@@ -17,6 +18,7 @@ interface Props {
   value: number | null;
   position: [number, number, number];
   accent?: string;
+  bodyColor?: string;
 }
 
 function makePipMaterial(accent: string) {
@@ -106,7 +108,7 @@ function pipPositionsForFace(face: PipFace): Array<[number, number, number]> {
 
 const FACES: PipFace[] = ["top", "bottom", "front", "back", "right", "left"];
 
-export function Dice3D({ rolling, value, position, accent = "#ff3aff" }: Props) {
+export function Dice3D({ rolling, value, position, accent = "#ff3aff", bodyColor = "#0c1024" }: Props) {
   const groupRef = useRef<THREE.Group>(null);
   const startTimeRef = useRef<number | null>(null);
   const startQuatRef = useRef(new THREE.Quaternion());
@@ -165,7 +167,7 @@ export function Dice3D({ rolling, value, position, accent = "#ff3aff" }: Props) 
       <mesh castShadow>
         <boxGeometry args={[SIZE, SIZE, SIZE]} />
         <meshPhysicalMaterial
-          color="#0c1024"
+          color={bodyColor}
           transmission={0.7}
           roughness={0.05}
           metalness={0.1}

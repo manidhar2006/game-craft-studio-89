@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, Hash, Sparkles, Users } from "lucide-react";
+import { ArrowLeft, Copy, Hash, Share2, Sparkles, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { GameBoard } from "./GameBoard";
@@ -10,10 +10,11 @@ import { DiceRoller } from "./DiceRoller";
 import { QuestionOverlay } from "./QuestionOverlay";
 import { buildInitialGameState, useMultiplayerGame } from "@/lib/game/use-multiplayer-game";
 import type { GameState } from "@/lib/game/engine-types";
-import { useAuth } from "@/lib/auth-context";
+import { getSessionId } from "@/lib/session-id";
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
 import { AVATARS } from "@/lib/game/constants";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { toast } from "sonner";
 
 interface Props {
@@ -27,13 +28,16 @@ interface RoomPlayer {
   seat_order: number;
 }
 
-const ROOM_CODE_RE = /^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/;
+const ROOM_CODE_RE = /^[A-Z0-9]{6}$/;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function GameSession({ roomId }: Props) {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const [profile, setProfile] = useState<{ display_name: string; avatar_id: number } | null>(null);
+  const userId = getSessionId();
+  const [localDisplayName, setLocalDisplayName] = useState<string>(() => {
+    if (typeof window === "undefined") return "Player";
+    return window.localStorage.getItem("dataviz:displayName") ?? "Player";
+  });
   const [roomInfo, setRoomInfo] = useState<{
     code: string;
     max_players: number;
@@ -51,29 +55,16 @@ export function GameSession({ roomId }: Props) {
   const joinAttemptRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!user) return;
-    supabase
-      .from("profiles")
-      .select("display_name, avatar_id")
-      .eq("id", user.id)
-      .maybeSingle()
-      .then(({ data, error }) => {
-        if (error) {
-          console.error("Profile fetch error:", error);
-        }
-        if (data) {
-          setProfile({ display_name: data.display_name, avatar_id: data.avatar_id ?? 0 });
-        } else {
-          // No profile row exists — use a sensible fallback so the UI doesn't get stuck
-          const fallbackName = user.email?.split("@")[0] ?? "Player";
-          setProfile({ display_name: fallbackName, avatar_id: 0 });
-        }
-      });
-  }, [user]);
+    if (typeof window === "undefined") return;
+    const onStorage = () => {
+      const stored = window.localStorage.getItem("dataviz:displayName");
+      if (stored) setLocalDisplayName(stored);
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
 
   useEffect(() => {
-    if (!user) return;
-
     const raw = roomId.trim();
     if (UUID_RE.test(raw)) {
       setResolvedRoomId(raw);
@@ -110,12 +101,12 @@ export function GameSession({ roomId }: Props) {
     return () => {
       active = false;
     };
-  }, [navigate, roomId, user]);
+  }, [navigate, roomId]);
 
   useEffect(() => {
-    if (!user || !resolvedRoomId) return undefined;
+    if (!resolvedRoomId) return undefined;
 
-    const displayName = profile?.display_name ?? user.email?.split("@")[0] ?? "Player";
+    const displayName = localDisplayName || "Player";
 
     const ensureRoomMembership = async (
       room: {
@@ -126,7 +117,7 @@ export function GameSession({ roomId }: Props) {
       },
       players: RoomPlayer[] | null,
     ) => {
-      if (players?.some((player) => player.player_id === user.id)) return;
+      if (players?.some((player) => player.player_id === userId)) return;
       if (room.status !== "waiting") {
         toast.error("That room has already started.");
         navigate({ to: "/lobby" });
@@ -141,7 +132,7 @@ export function GameSession({ roomId }: Props) {
       const { error: joinError } = await supabase.from("room_players").upsert(
         {
           room_id: room.id,
-          player_id: user.id,
+          player_id: userId,
           display_name: displayName,
           avatar_id: null,
           seat_order: seatOrder,
@@ -239,24 +230,24 @@ export function GameSession({ roomId }: Props) {
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [navigate, profile?.display_name, resolvedRoomId, user]);
+  }, [navigate, localDisplayName, resolvedRoomId, userId]);
 
-  const meInRoom = roomPlayers.find((player) => player.player_id === user?.id);
+  const meInRoom = roomPlayers.find((player) => player.player_id === userId);
   const requiredPlayers = roomInfo?.max_players ?? 4;
-  const isHost = !!user && roomInfo?.host_id === user.id;
+  const isHost = roomInfo?.host_id === userId;
   const playersReady = roomPlayers.length >= requiredPlayers;
   const avatarsReady = roomPlayers.every((player) => player.avatar_id !== null);
   const setupReady = playersReady && avatarsReady;
   const roomStarted = roomInfo?.status === "in_progress";
 
   async function startRoomGame() {
-    if (!user || !isHost || !setupReady || !resolvedRoomId) return;
+    if (!isHost || !setupReady || !resolvedRoomId) return;
 
     setStartingGame(true);
     const firstPlayer = [...roomPlayers].sort((a, b) => a.seat_order - b.seat_order)[0];
-    const hostPlayer = roomPlayers.find((player) => player.player_id === user.id);
+    const hostPlayer = roomPlayers.find((player) => player.player_id === userId);
     const opponents = roomPlayers
-      .filter((player) => player.player_id !== user.id)
+      .filter((player) => player.player_id !== userId)
       .map((player) => ({
         id: player.player_id,
         name: player.display_name,
@@ -264,12 +255,12 @@ export function GameSession({ roomId }: Props) {
       }));
 
     const initialGameState = buildInitialGameState(
-      user.id,
-      hostPlayer?.display_name ?? profile?.display_name ?? "Host",
-      hostPlayer?.avatar_id ?? profile?.avatar_id ?? 0,
+      userId,
+      hostPlayer?.display_name ?? (localDisplayName || "Host"),
+      hostPlayer?.avatar_id ?? 0,
       opponents,
     );
-    initialGameState.currentPlayerId = firstPlayer?.player_id ?? user.id;
+    initialGameState.currentPlayerId = firstPlayer?.player_id ?? userId;
 
     const { error } = await supabase
       .from("rooms")
@@ -279,7 +270,7 @@ export function GameSession({ roomId }: Props) {
         game_state: initialGameState as unknown as Json,
       })
       .eq("id", resolvedRoomId)
-      .eq("host_id", user.id);
+      .eq("host_id", userId);
 
     if (error) {
       console.error("Start room game error", error);
@@ -290,14 +281,14 @@ export function GameSession({ roomId }: Props) {
   }
 
   async function selectRoomAvatar(nextAvatarId: number) {
-    if (!user || !resolvedRoomId) return;
+    if (!resolvedRoomId) return;
 
     setSavingAvatar(true);
     const { error } = await supabase
       .from("room_players")
       .update({ avatar_id: nextAvatarId })
       .eq("room_id", resolvedRoomId)
-      .eq("player_id", user.id);
+      .eq("player_id", userId);
 
     if (error) {
       console.error("Avatar selection error", error);
@@ -308,7 +299,7 @@ export function GameSession({ roomId }: Props) {
   }
 
   const roomOpponents = roomPlayers
-    .filter((player) => player.player_id !== user?.id)
+    .filter((player) => player.player_id !== userId)
     .map((player) => ({
       id: player.player_id,
       name: player.display_name,
@@ -316,7 +307,7 @@ export function GameSession({ roomId }: Props) {
     }));
 
   async function persistRoomState(nextState: GameState) {
-    if (!roomStarted || !user || !resolvedRoomId) return;
+    if (!roomStarted || !resolvedRoomId) return;
 
     const { error } = await supabase
       .from("rooms")
@@ -332,11 +323,11 @@ export function GameSession({ roomId }: Props) {
   }
 
   const game = useMultiplayerGame({
-    enabled: !!profile && roomStarted && !!roomGameState,
-    humanName: meInRoom?.display_name ?? profile?.display_name ?? "You",
+    enabled: roomStarted && !!roomGameState,
+    humanName: meInRoom?.display_name ?? (localDisplayName || "You"),
     humanAvatar: meInRoom?.avatar_id ?? 0,
     opponents: roomOpponents,
-    localPlayerId: user?.id ?? "human",
+    localPlayerId: userId,
     initialState: roomGameState,
     externalState: roomGameState,
     onStateChange: (nextState) => {
@@ -344,7 +335,7 @@ export function GameSession({ roomId }: Props) {
     },
   });
 
-  if (!profile || (!roomStarted && (loadingRoomData || joiningRoom || !resolvedRoomId))) {
+  if (!roomStarted && (loadingRoomData || joiningRoom || !resolvedRoomId)) {
     return (
       <div className="min-h-screen flex items-center justify-center text-muted-foreground">
         Setting up the board…
@@ -355,7 +346,7 @@ export function GameSession({ roomId }: Props) {
   if (!roomStarted) {
     const takenByOthers = new Set(
       roomPlayers
-        .filter((player) => player.player_id !== user?.id && player.avatar_id !== null)
+        .filter((player) => player.player_id !== userId && player.avatar_id !== null)
         .map((player) => player.avatar_id as number),
     );
     const orderedPlayers = [...roomPlayers].sort((a, b) => a.seat_order - b.seat_order);
@@ -364,22 +355,75 @@ export function GameSession({ roomId }: Props) {
     return (
       <div className="min-h-screen bg-background">
         <header className="flex items-center justify-between border-b border-border/60 px-6 py-4">
-          <div />
+          <div className="w-10" />
           <div className="flex items-center gap-2 text-sm font-medium">
             <Sparkles className="h-4 w-4 text-accent" /> Room Setup
           </div>
-          <div />
+          <ThemeToggle />
         </header>
 
         <main className="mx-auto grid max-w-4xl gap-6 px-6 py-8 lg:grid-cols-2">
           <Card className="space-y-4 p-6">
             <h2 className="text-xl font-semibold">Room Details</h2>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Hash className="h-4 w-4" /> Room ID:{" "}
-              <span className="font-mono text-foreground">
-                {roomInfo?.code ?? resolvedRoomCode ?? roomId.slice(0, 8)}
-              </span>
-            </div>
+            {(() => {
+              const shareCode = roomInfo?.code ?? resolvedRoomCode;
+              const shareUrl =
+                shareCode && typeof window !== "undefined"
+                  ? `${window.location.origin}/game/${shareCode}`
+                  : null;
+              const waMessage = shareCode
+                ? `Join my Data Viz game! Room code: ${shareCode}\n${shareUrl ?? ""}`.trim()
+                : "";
+              const waHref = waMessage
+                ? `https://wa.me/?text=${encodeURIComponent(waMessage)}`
+                : "#";
+              const onCopy = async () => {
+                if (!shareCode) return;
+                try {
+                  await navigator.clipboard.writeText(shareUrl ?? shareCode);
+                  toast.success("Invite link copied");
+                } catch {
+                  toast.error("Could not copy link");
+                }
+              };
+              return (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Hash className="h-4 w-4" /> Room code:{" "}
+                    <span className="font-mono text-base tracking-[0.3em] text-foreground">
+                      {shareCode ?? roomId.slice(0, 6).toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={onCopy}
+                      disabled={!shareCode}
+                    >
+                      <Copy className="mr-2 h-4 w-4" /> Copy link
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="bg-[#25D366] text-white hover:bg-[#1ebe57]"
+                      asChild
+                      disabled={!shareCode}
+                    >
+                      <a
+                        href={waHref}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-disabled={!shareCode}
+                      >
+                        <Share2 className="mr-2 h-4 w-4" /> Share on WhatsApp
+                      </a>
+                    </Button>
+                  </div>
+                </div>
+              );
+            })()}
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Users className="h-4 w-4" /> Players joined:{" "}
               <span className="text-foreground">
@@ -419,7 +463,7 @@ export function GameSession({ roomId }: Props) {
                         </div>
                       </div>
                     </div>
-                    {slot?.player_id === user?.id ? <span className="text-xs text-primary">You</span> : null}
+                    {slot?.player_id === userId ? <span className="text-xs text-primary">You</span> : null}
                   </div>
                 );
               })}
@@ -491,7 +535,7 @@ export function GameSession({ roomId }: Props) {
   }
 
   const { state } = game;
-  const localPlayerId = user?.id ?? "";
+  const localPlayerId = userId;
   const currentPlayer = state.players.find((player) => player.id === state.currentPlayerId);
   const isMyTurn = state.currentPlayerId === localPlayerId;
   const activeMcq = state.activeMcq;
@@ -500,7 +544,7 @@ export function GameSession({ roomId }: Props) {
   const winner = state.winner;
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,oklch(0.985_0.01_96),oklch(0.96_0.01_140))] text-foreground">
+    <div className="min-h-screen bg-gradient-board text-foreground">
       <header className="flex items-center justify-between border-b border-border/60 bg-background/70 px-6 py-4 backdrop-blur">
         <div />
         <div className="flex flex-col items-center text-center">
@@ -512,12 +556,15 @@ export function GameSession({ roomId }: Props) {
             {currentPlayer ? `${currentPlayer.name}'s turn` : "Waiting for turn state…"}
           </div>
         </div>
-        <Button size="sm" variant="ghost" onClick={() => {
-          game.leaveGame();
-          navigate({ to: "/" });
-        }}>
-          Leave
-        </Button>
+        <div className="flex items-center gap-1">
+          <ThemeToggle />
+          <Button size="sm" variant="ghost" onClick={() => {
+            game.leaveGame();
+            navigate({ to: "/" });
+          }}>
+            Leave
+          </Button>
+        </div>
       </header>
 
       <main className="mx-auto grid max-w-[1600px] gap-6 px-4 py-6 lg:grid-cols-[280px_minmax(0,1fr)_340px] lg:px-6 lg:py-8">
