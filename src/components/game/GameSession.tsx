@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, Hash, Sparkles, Users } from "lucide-react";
+import { Copy, Hash, MessageCircle, Sparkles, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { GameBoard } from "./GameBoard";
@@ -26,12 +26,12 @@ interface RoomPlayer {
   seat_order: number;
 }
 
-const ROOM_CODE_RE = /^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/;
+const ROOM_CODE_RE = /^[A-HJ-NP-Z2-9]{6}$/;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function GameSession({ roomId }: Props) {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [profile, setProfile] = useState<{ display_name: string; avatar_id: number } | null>(null);
   const [roomInfo, setRoomInfo] = useState<{
     code: string;
@@ -48,6 +48,12 @@ export function GameSession({ roomId }: Props) {
   const [resolvedRoomId, setResolvedRoomId] = useState<string | null>(null);
   const [resolvedRoomCode, setResolvedRoomCode] = useState<string | null>(null);
   const joinAttemptRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate({ to: "/auth", search: { mode: "signup" } });
+    }
+  }, [authLoading, navigate, user]);
 
   useEffect(() => {
     if (!user) return;
@@ -128,6 +134,12 @@ export function GameSession({ roomId }: Props) {
       if (players?.some((player) => player.player_id === user.id)) return;
       if (room.status !== "waiting") {
         toast.error("That room has already started.");
+        navigate({ to: "/lobby" });
+        return;
+      }
+      const maxPlayers = room.max_players ?? 4;
+      if ((players?.length ?? 0) >= maxPlayers) {
+        toast.error("Room is full");
         navigate({ to: "/lobby" });
         return;
       }
@@ -359,6 +371,48 @@ export function GameSession({ roomId }: Props) {
     );
     const orderedPlayers = [...roomPlayers].sort((a, b) => a.seat_order - b.seat_order);
     const slots = Array.from({ length: requiredPlayers }, (_, index) => orderedPlayers[index] ?? null);
+    const inviteCode = (roomInfo?.code ?? resolvedRoomCode ?? roomId.slice(0, 6)).toUpperCase();
+    const inviteUrl =
+      typeof window === "undefined" ? "" : `${window.location.origin}/game/${inviteCode}`;
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(
+      `Join my DPDPA Tycoon room. Code: ${inviteCode}. ${inviteUrl}`,
+    )}`;
+
+    const copyRoomCode = async () => {
+      if (navigator.clipboard?.writeText) {
+        try {
+          await navigator.clipboard.writeText(inviteCode);
+          toast.success("Room code copied.");
+          return;
+        } catch (error) {
+          console.error("Clipboard API copy failed:", error);
+        }
+      }
+
+      try {
+        const textarea = document.createElement("textarea");
+        textarea.value = inviteCode;
+        textarea.setAttribute("readonly", "");
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        const success = document.execCommand("copy");
+        document.body.removeChild(textarea);
+        if (success) {
+          toast.success("Room code copied.");
+          return;
+        }
+      } catch (error) {
+        console.error("Fallback copy failed:", error);
+      }
+
+      toast.error("Could not copy room code. Please select and copy manually.");
+    };
+
+    const inviteWhatsApp = () => {
+      window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+    };
 
     return (
       <div className="min-h-screen bg-background">
@@ -376,8 +430,16 @@ export function GameSession({ roomId }: Props) {
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Hash className="h-4 w-4" /> Room ID:{" "}
               <span className="font-mono text-foreground">
-                {roomInfo?.code ?? resolvedRoomCode ?? roomId.slice(0, 8)}
+                {inviteCode}
               </span>
+              <div className="ml-auto flex items-center gap-2">
+                <Button type="button" size="sm" variant="ghost" onClick={copyRoomCode}>
+                  <Copy className="mr-1.5 h-4 w-4" /> Copy
+                </Button>
+                <Button type="button" size="sm" variant="ghost" onClick={inviteWhatsApp}>
+                  <MessageCircle className="mr-1.5 h-4 w-4" /> WhatsApp
+                </Button>
+              </div>
             </div>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Users className="h-4 w-4" /> Players joined:{" "}
@@ -505,7 +567,7 @@ export function GameSession({ roomId }: Props) {
         <div className="flex flex-col items-center text-center">
           <div className="flex items-center gap-2 text-sm font-medium">
             <Sparkles className="h-4 w-4 text-accent" />
-            {`Room ${roomInfo?.code ?? resolvedRoomCode ?? roomId.slice(0, 8)}…`}
+            {`Room ${roomInfo?.code ?? resolvedRoomCode ?? roomId.slice(0, 6)}`}
           </div>
           <div className="text-xs text-muted-foreground">
             {currentPlayer ? `${currentPlayer.name}'s turn` : "Waiting for turn state…"}
@@ -524,7 +586,7 @@ export function GameSession({ roomId }: Props) {
           <Card className="border-border/70 bg-card/90 p-4 shadow-soft">
             <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Match</div>
             <div className="mt-2 text-lg font-semibold">
-              {`Room ${roomInfo?.code ?? resolvedRoomCode ?? "…"}`}
+              {`Room ${roomInfo?.code ?? resolvedRoomCode ?? roomId.slice(0, 6)}`}
             </div>
             <div className="mt-1 text-sm text-muted-foreground">
               {state.phase === "ended" && winner

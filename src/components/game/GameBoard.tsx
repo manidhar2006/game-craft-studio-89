@@ -66,11 +66,13 @@ export function GameBoard({
   }, [players, visualPositions]);
 
   return (
-    <div className="relative aspect-square w-full max-w-[720px]">
-      <div className="grid h-full w-full grid-cols-6 grid-rows-6 gap-1.5 rounded-3xl bg-gradient-to-br from-secondary to-muted p-3 shadow-[0_30px_60px_-30px_rgba(40,60,55,0.35)] border border-border">
+    <div className="relative aspect-square w-full max-w-[1040px]">
+      <div className="grid h-full w-full grid-cols-6 grid-rows-6 gap-[3px] rounded-[28px] bg-gradient-to-br from-secondary to-muted p-[6px] shadow-[0_30px_60px_-30px_rgba(40,60,55,0.35)] border border-border">
         {/* Center plate */}
-        <div className="col-start-2 col-end-6 row-start-2 row-end-6 rounded-2xl bg-[oklch(0.96_0.012_120)] border border-border/60 flex items-center justify-center p-4">
-          {centerContent}
+        <div className="col-start-2 col-end-6 row-start-2 row-end-6 flex items-center justify-center rounded-2xl bg-[oklch(0.95_0.01_110)] border border-border/60">
+          <div className="w-[56%] min-w-[220px] max-w-[360px]">
+            {centerContent}
+          </div>
         </div>
 
         {tiles.map((tile) => {
@@ -88,35 +90,35 @@ export function GameBoard({
             <div
               key={tile.index}
               style={{ gridColumn: pos.col, gridRow: pos.row }}
-              className={`relative flex flex-col rounded-lg bg-card border border-border/70 overflow-hidden text-[10px] leading-tight transition-shadow ${
+              className={`relative flex flex-col rounded-lg bg-card border border-border/70 overflow-hidden text-[12px] leading-[1.15] transition-shadow ${
                 tile.type === "principle" ? "" : "bg-secondary/60"
               }`}
             >
               {tile.type === "principle" && tile.group && (
-                <div className="h-2.5" style={{ background: GROUP_COLORS[tile.group] }} />
+                <div className="h-3.5" style={{ background: GROUP_COLORS[tile.group] }} />
               )}
-              <div className="flex flex-1 flex-col p-1.5">
-                <div className="flex items-start justify-between gap-1">
-                  <span className="font-semibold text-[10px] text-foreground">{tile.name}</span>
-                  {tile.type === "regulator" && <Gavel className="h-3 w-3 text-muted-foreground" />}
-                  {tile.type === "tax" && <Coins className="h-3 w-3 text-destructive" />}
-                  {tile.type === "free_audit" && <Scale className="h-3 w-3 text-primary" />}
-                  {tile.type === "start" && <Star className="h-3 w-3 text-accent" />}
+              <div className="flex flex-1 flex-col p-2">
+                <div className="flex items-start justify-between gap-1.5">
+                  <span className="font-semibold text-[13px] text-foreground">{tile.name}</span>
+                  {tile.type === "regulator" && <Gavel className="h-4 w-4 text-muted-foreground" />}
+                  {tile.type === "tax" && <Coins className="h-4 w-4 text-destructive" />}
+                  {tile.type === "free_audit" && <Scale className="h-4 w-4 text-primary" />}
+                  {tile.type === "start" && <Star className="h-4 w-4 text-accent" />}
                 </div>
                 {tile.subtitle && (
-                  <span className="text-[9px] text-muted-foreground mt-0.5 line-clamp-2">
+                  <span className="text-[11px] text-muted-foreground mt-1 line-clamp-2">
                     {tile.subtitle}
                   </span>
                 )}
                 {principle && (
-                  <span className="mt-auto text-[9px] font-medium text-primary">
+                  <span className="mt-auto text-[11px] font-medium text-primary">
                     ₹{principle.price}
                   </span>
                 )}
                 {layers > 0 && (
-                  <div className="mt-0.5 flex gap-0.5">
+                  <div className="mt-1.5 flex gap-1">
                     {Array.from({ length: layers }).map((_, i) => (
-                      <span key={i} className="h-1 w-1.5 rounded-sm bg-accent" />
+                      <span key={i} className="h-2 w-2.5 rounded-sm bg-accent" />
                     ))}
                   </div>
                 )}
@@ -124,7 +126,7 @@ export function GameBoard({
               {/* Owner indicator */}
               {ownerPlayer && (
                 <div
-                  className="absolute right-1 bottom-1 h-2.5 w-2.5 rounded-full ring-1 ring-card"
+                  className="absolute right-1 bottom-1 h-3.5 w-3.5 rounded-full ring-1 ring-card"
                   style={{ background: AVATARS[ownerPlayer.avatarId % AVATARS.length].color }}
                 />
               )}
@@ -151,7 +153,7 @@ export function GameBoard({
                   layoutId={`token-${p.id}`}
                   initial={false}
                   transition={{ type: "spring", stiffness: 350, damping: 30 }}
-                  className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-sm ring-1 ring-card ${
+                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-lg ring-1 ring-card ${
                     p.id === currentPlayerId ? "ring-2 ring-primary" : ""
                   }`}
                   style={{

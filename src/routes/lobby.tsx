@@ -30,7 +30,7 @@ function LobbyPage() {
   const { user, signOut, loading } = useAuth();
   const navigate = useNavigate();
   useEffect(() => {
-    if (!loading && !user) navigate({ to: "/auth", search: { mode: "signin" } });
+    if (!loading && !user) navigate({ to: "/auth", search: { mode: "signup" } });
   }, [user, loading, navigate]);
   const [displayName, setDisplayName] = useState("");
   const [avatarId, setAvatarId] = useState<number>(0);
@@ -139,6 +139,25 @@ function LobbyPage() {
       return;
     }
 
+    const maxPlayers = room.max_players ?? MAX_PLAYERS;
+    const { data: existingPlayers, error: existingPlayersError } = await supabase
+      .from("room_players")
+      .select("player_id, seat_order")
+      .eq("room_id", room.id);
+    if (existingPlayersError) {
+      console.error("Supabase room_players lookup error:", existingPlayersError);
+      toast.error("Could not join the room. Please try again.");
+      setJoining(false);
+      return;
+    }
+
+    const alreadyInRoom = (existingPlayers ?? []).some((player) => player.player_id === user.id);
+    if (!alreadyInRoom && (existingPlayers?.length ?? 0) >= maxPlayers) {
+      toast.error("Room is full");
+      setJoining(false);
+      return;
+    }
+
     const { error: joinError } = await supabase.from("room_players").upsert(
       {
         room_id: room.id,
@@ -164,7 +183,6 @@ function LobbyPage() {
       console.error("Supabase room_players lookup error:", playersError);
     }
 
-    const maxPlayers = room.max_players ?? MAX_PLAYERS;
     if ((players?.length ?? 0) > maxPlayers) {
       await supabase.from("room_players").delete().eq("room_id", room.id).eq("player_id", user.id);
       toast.error("Room is full");
@@ -226,10 +244,11 @@ function LobbyPage() {
             <Hash className="h-7 w-7 text-primary" />
             <h3 className="mt-4 text-lg font-semibold">Join Room</h3>
             <Input
-              placeholder="ABCD-EFGH-JKLM"
+              placeholder="ABC234"
               value={joinCode}
               onChange={(e) => setJoinCode(e.target.value)}
               className="mt-3 uppercase tracking-wider"
+              maxLength={6}
             />
             <Button
               className="mt-3"
