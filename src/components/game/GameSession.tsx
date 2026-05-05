@@ -3,6 +3,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Copy, Hash, Share2, Sparkles, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { GameBoard } from "./GameBoard";
 import { PlayerPanel } from "./PlayerPanel";
 import { PropertiesBreakdown } from "./PropertiesBreakdown";
@@ -35,9 +36,10 @@ export function GameSession({ roomId }: Props) {
   const navigate = useNavigate();
   const userId = getSessionId();
   const [localDisplayName, setLocalDisplayName] = useState<string>(() => {
-    if (typeof window === "undefined") return "Player";
-    return window.localStorage.getItem("dataviz:displayName") ?? "Player";
+    if (typeof window === "undefined") return "";
+    return window.localStorage.getItem("dataviz:displayName") ?? "";
   });
+  const [pendingName, setPendingName] = useState("");
   const [roomInfo, setRoomInfo] = useState<{
     code: string;
     max_players: number;
@@ -106,7 +108,7 @@ export function GameSession({ roomId }: Props) {
   useEffect(() => {
     if (!resolvedRoomId) return undefined;
 
-    const displayName = localDisplayName || "Player";
+    const displayName = localDisplayName.trim();
 
     const ensureRoomMembership = async (
       room: {
@@ -118,6 +120,7 @@ export function GameSession({ roomId }: Props) {
       players: RoomPlayer[] | null,
     ) => {
       if (players?.some((player) => player.player_id === userId)) return;
+      if (!displayName) return;
       if (room.status !== "waiting") {
         toast.error("That room has already started.");
         navigate({ to: "/lobby" });
@@ -339,6 +342,58 @@ export function GameSession({ roomId }: Props) {
     return (
       <div className="min-h-screen flex items-center justify-center text-muted-foreground">
         Setting up the board…
+      </div>
+    );
+  }
+
+  if (!roomStarted && !meInRoom && !localDisplayName.trim()) {
+    const submitName = () => {
+      const next = pendingName.trim();
+      if (!next) {
+        toast.error("Enter a display name to join.");
+        return;
+      }
+      try {
+        window.localStorage.setItem("dataviz:displayName", next);
+      } catch {
+        // ignore storage errors; in-memory state is sufficient to proceed
+      }
+      setLocalDisplayName(next);
+    };
+    return (
+      <div className="min-h-screen bg-background">
+        <header className="flex items-center justify-between border-b border-border/60 px-6 py-4">
+          <div className="w-10" />
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <Sparkles className="h-4 w-4 text-accent" /> Join Room
+          </div>
+          <ThemeToggle />
+        </header>
+        <main className="mx-auto max-w-md px-6 py-12">
+          <Card className="space-y-4 p-6">
+            <h2 className="text-xl font-semibold">Enter your name</h2>
+            <p className="text-sm text-muted-foreground">
+              You're joining room{" "}
+              <span className="font-mono text-foreground">
+                {roomInfo?.code ?? resolvedRoomCode ?? roomId.slice(0, 6).toUpperCase()}
+              </span>
+              . Pick a display name so other players can see you.
+            </p>
+            <Input
+              autoFocus
+              value={pendingName}
+              onChange={(event) => setPendingName(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") submitName();
+              }}
+              placeholder="Your name"
+              maxLength={32}
+            />
+            <Button className="w-full" onClick={submitName} disabled={!pendingName.trim()}>
+              Join Room
+            </Button>
+          </Card>
+        </main>
       </div>
     );
   }
