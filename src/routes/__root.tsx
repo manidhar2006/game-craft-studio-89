@@ -1,10 +1,8 @@
-import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
+import { Outlet, Link, createRootRoute } from "@tanstack/react-router";
 
-import appCss from "../styles.css?url";
+import "../styles.css";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/lib/theme-context";
-
-const NO_FLASH_THEME_SCRIPT = `(function(){try{var t=localStorage.getItem('dataviz:theme');if(t==='light'){document.documentElement.classList.add('light');}}catch(e){}})();`;
 
 function NotFoundComponent() {
   return (
@@ -29,60 +27,9 @@ function NotFoundComponent() {
 }
 
 export const Route = createRootRoute({
-  head: () => ({
-    meta: [
-      { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Data Viz — Master India's DPDP Act through play" },
-      {
-        name: "description",
-        content:
-          "A 3D board game that turns India's Digital Personal Data Protection Act into an interactive match. Play solo, against the computer, or with friends — no login required.",
-      },
-      { name: "author", content: "Data Viz" },
-      { property: "og:title", content: "Data Viz" },
-      {
-        property: "og:description",
-        content:
-          "Learn India's DPDP Act through a 3D, neon-cyberpunk board game. Play instantly as a guest.",
-      },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
-      { name: "twitter:site", content: "@Lovable" },
-    ],
-    links: [
-      { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
-      {
-        rel: "stylesheet",
-        href: appCss,
-      },
-      { rel: "preconnect", href: "https://fonts.googleapis.com" },
-      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      {
-        rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap",
-      },
-    ],
-  }),
-  shellComponent: RootShell,
   component: RootComponent,
   notFoundComponent: NotFoundComponent,
 });
-
-function RootShell({ children }: { children: React.ReactNode }) {
-  return (
-    <html lang="en" suppressHydrationWarning={true}>
-      <head>
-        <HeadContent />
-        <script dangerouslySetInnerHTML={{ __html: NO_FLASH_THEME_SCRIPT }} />
-      </head>
-      <body suppressHydrationWarning={true}>
-        {children}
-        <Scripts />
-      </body>
-    </html>
-  );
-}
 
 function RootComponent() {
   return (
