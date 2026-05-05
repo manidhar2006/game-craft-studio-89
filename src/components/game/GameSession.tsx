@@ -427,7 +427,7 @@ export function GameSession({ roomId }: Props) {
                   ? `${window.location.origin}/game/${shareCode}`
                   : null;
               const waMessage = shareCode
-                ? `Join my Data Viz game! Room code: ${shareCode}\n${shareUrl ?? ""}`.trim()
+                ? `Join my Data Guardian game! Room code: ${shareCode}\n${shareUrl ?? ""}`.trim()
                 : "";
               const waHref = waMessage
                 ? `https://wa.me/?text=${encodeURIComponent(waMessage)}`

@@ -62,7 +62,7 @@
 :root {
   --radius: 0.875rem;
 
-  /* Data Viz neon-cyberpunk palette */
+  /* Data Guardian neon-cyberpunk palette */
   --background: oklch(0.10 0.02 270); /* deep navy-black */
   --foreground: oklch(0.95 0.01 240);
   --card: oklch(0.14 0.025 270);

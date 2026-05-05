@@ -15,7 +15,7 @@ export const Route = createFileRoute("/how-it-works")({
   component: HowItWorks,
   head: () => ({
     meta: [
-      { title: "How Data Viz works" },
+      { title: "How Data Guardian works" },
       {
         name: "description",
         content:

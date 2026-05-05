@@ -1,4 +1,4 @@
-# Data Viz — Game Specification
+# Data Guardian — Game Specification
 
 A multiplayer board game that teaches India's **Digital Personal Data Protection Act, 2023** through a Monopoly-style loop themed around the **Banking & Insurance** sector. Players compete as Chief Data Officers of fictional financial institutions, acquiring "Compliance Districts" by answering MCQs and outlasting opponents through superior knowledge of data protection law.
 

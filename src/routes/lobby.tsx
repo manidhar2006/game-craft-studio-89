@@ -203,7 +203,7 @@ function LobbyPage() {
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-hero shadow-soft">
             <Sparkles className="h-5 w-5 text-primary-foreground" />
           </div>
-          <span className="font-semibold tracking-tight">Data Viz</span>
+          <span className="font-semibold tracking-tight">Data Guardian</span>
         </Link>
         <ThemeToggle />
       </header>

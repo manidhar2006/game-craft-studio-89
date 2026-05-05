@@ -17,7 +17,7 @@ function LandingPage() {
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-hero shadow-soft">
             <Sparkles className="h-5 w-5 text-primary-foreground" />
           </div>
-          <span className="font-display text-lg font-semibold tracking-tight">Data Viz</span>
+          <span className="font-display text-lg font-semibold tracking-tight">Data Guardian</span>
         </div>
         <ThemeToggle />
       </header>
