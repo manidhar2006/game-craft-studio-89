@@ -513,7 +513,7 @@ export function GameSession({ roomId }: Props) {
                         <div className="text-xs text-muted-foreground">
                           {slot
                             ? avatar
-                              ? avatar.name
+                              ? "Avatar selected"
                               : "Avatar pending"
                             : "Share the room code to invite"}
                         </div>
@@ -572,7 +572,7 @@ export function GameSession({ roomId }: Props) {
               Your avatar:{" "}
               <span className="text-foreground">
                 {meInRoom?.avatar_id !== null && meInRoom?.avatar_id !== undefined
-                  ? AVATARS[meInRoom.avatar_id % AVATARS.length].name
+                  ? AVATARS[meInRoom.avatar_id % AVATARS.length].emoji
                   : "Not selected"}
               </span>
             </div>
