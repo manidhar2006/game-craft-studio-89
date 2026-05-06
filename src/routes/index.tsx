@@ -37,7 +37,7 @@ function LandingPage() {
             filter: "drop-shadow(0 0 16px rgba(58,255,217,0.45))",
           }}
         >
-          DATA VIZ
+          DATA GUARDIAN
         </h1>
 
         <p className="mt-6 max-w-xl text-balance text-base text-muted-foreground md:text-lg">

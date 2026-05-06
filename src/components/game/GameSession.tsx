@@ -9,6 +9,7 @@ import { PlayerPanel } from "./PlayerPanel";
 import { PropertiesBreakdown } from "./PropertiesBreakdown";
 import { DiceRoller } from "./DiceRoller";
 import { QuestionOverlay } from "./QuestionOverlay";
+import { HudCard } from "./board3d/HudCard";
 import { buildInitialGameState, useMultiplayerGame } from "@/lib/game/use-multiplayer-game";
 import type { GameState } from "@/lib/game/engine-types";
 import { getSessionId } from "@/lib/session-id";
@@ -652,28 +653,43 @@ export function GameSession({ roomId }: Props) {
           <PropertiesBreakdown state={state} />
         </aside>
 
-        <section className="flex flex-col items-center gap-5">
-          <GameBoard
-            tiles={state.board}
-            players={state.players}
-            currentPlayerId={state.currentPlayerId}
-            propertyOwners={state.propertyOwners}
-            topDownCamera={state.phase === "mcq"}
-            diceRolling={state.phase === "rolling"}
-            diceValue={state.lastRoll}
-            centerContent={
-              <DiceRoller
-                disabled={!game.canRoll}
-                rolling={state.phase === "rolling"}
-                lastRoll={state.lastRoll}
-                onRoll={game.rollDice}
-                currentName={currentPlayer?.name ?? ""}
-                isHumanTurn={isMyTurn}
-              />
-            }
-          />
+        <section className="relative flex flex-col items-center gap-5">
+          <div className="relative w-full">
+            <GameBoard
+              tiles={state.board}
+              players={state.players}
+              currentPlayerId={state.currentPlayerId}
+              propertyOwners={state.propertyOwners}
+              topDownCamera={state.phase === "mcq"}
+              diceRolling={state.phase === "rolling"}
+              diceValue={state.lastRoll}
+              centerContent={
+                <DiceRoller
+                  disabled={!game.canRoll}
+                  rolling={state.phase === "rolling"}
+                  lastRoll={state.lastRoll}
+                  onRoll={game.rollDice}
+                  currentName={currentPlayer?.name ?? ""}
+                  isHumanTurn={isMyTurn}
+                />
+              }
+            />
 
-          
+            {state.lastRoll != null ? (
+              <div className="pointer-events-none absolute inset-0">
+                <div className="absolute left-2 bottom-2">
+                  <HudCard accent="#3affd9">
+                    <div className="text-[10px] uppercase tracking-[0.3em] text-white/60">
+                      Dice Roll
+                    </div>
+                    <div className="font-display text-2xl font-semibold text-[#3affd9]">
+                      {state.lastRoll}
+                    </div>
+                  </HudCard>
+                </div>
+              </div>
+            ) : null}
+          </div>
         </section>
 
         <aside className="space-y-4">

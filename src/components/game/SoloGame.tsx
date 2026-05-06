@@ -91,7 +91,7 @@ export function SoloGame({ displayName, avatarId, cpuCount }: Props) {
               filter: "drop-shadow(0 0 8px rgba(58,255,217,0.4))",
             }}
           >
-            DATA VIZ
+            DATA GUARDIAN
           </div>
           <div className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
             DPDP Compliance Quest
@@ -104,13 +104,13 @@ export function SoloGame({ displayName, avatarId, cpuCount }: Props) {
         <aside className="space-y-4">
           <Card className="border-border/70 bg-card/90 p-4 shadow-soft">
             <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Match</div>
-            <div className="mt-2 text-lg font-semibold">Solo vs CPU</div>
+            <div className="mt-2 text-lg font-semibold">Solo vs Computer</div>
             <div className="mt-1 text-sm text-muted-foreground">
               {state.phase === "ended" && winner
                 ? `Winner: ${winner.name}`
                 : isMyTurn
                   ? "You are up"
-                  : `${currentPlayer?.name ?? "CPU"} is acting`}
+                  : `${currentPlayer?.name ?? "Computer"} is acting`}
             </div>
           </Card>
 

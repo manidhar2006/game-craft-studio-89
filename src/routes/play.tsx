@@ -99,7 +99,7 @@ function PlayPage() {
                   variant={cpuCount === n ? "default" : "outline"}
                   onClick={() => setCpuCount(n as 1 | 2 | 3)}
                 >
-                  {n} CPU
+                  {n} Computer
                 </Button>
               ))}
             </div>
