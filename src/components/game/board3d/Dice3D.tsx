@@ -163,20 +163,13 @@ export function Dice3D({ rolling, value, position, accent = "#ff3aff", bodyColor
 
   return (
     <group ref={groupRef} position={position}>
-      {/* Glassy die body */}
-      <mesh castShadow>
+      {/* Solid die body — opaque so only the viewer-facing top & front faces are visible */}
+      <mesh castShadow receiveShadow>
         <boxGeometry args={[SIZE, SIZE, SIZE]} />
-        <meshPhysicalMaterial
+        <meshStandardMaterial
           color={bodyColor}
-          transmission={0.7}
-          roughness={0.05}
-          metalness={0.1}
-          thickness={0.4}
-          ior={1.4}
-          clearcoat={1}
-          clearcoatRoughness={0.1}
-          attenuationColor="#3affd9"
-          attenuationDistance={0.4}
+          roughness={0.35}
+          metalness={0.15}
         />
       </mesh>
       {/* Edge glow outline — just the 12 cube edges */}
