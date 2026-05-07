@@ -63,11 +63,11 @@ export function QuestionOverlay({ question, principleName, mode, onAnswer }: Pro
                 onClick={() => setPicked(opt.key)}
                 className={`flex items-start gap-3 rounded-lg border px-3 py-2.5 text-left text-sm transition-all ${
                   isCorrect
-                    ? "border-[#3affa1] bg-[#3affa1]/10"
+                    ? "border-[#3affa1] bg-[#3affa1]/15 text-[#9bffd0]"
                     : isWrongPick
-                      ? "border-[#ff3a4d] bg-[#ff3a4d]/10"
+                      ? "border-[#ff3a4d] bg-[#ff3a4d]/15 text-[#ffb1bb]"
                       : isPick
-                        ? "border-[#3affd9] bg-white/5"
+                        ? "border-[#3affd9] bg-white/5 text-white"
                         : "border-white/15 bg-white/[0.02] text-white/90 hover:border-[#3affd9]/60 hover:bg-white/5"
                 }`}
               >
