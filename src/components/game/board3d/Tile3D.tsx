@@ -132,22 +132,25 @@ export function Tile3D({ tile, ownerColor, layers, highlighted, palette }: Props
         style={{ pointerEvents: "none" }}
       >
         <div
-          className="select-none text-center whitespace-nowrap"
+          className="select-none text-center"
           style={{
             color: palette.labelColor,
             textShadow: palette.labelShadow(baseColor),
+            maxWidth: "78px",
+            wordBreak: "break-word",
+            hyphens: "auto",
           }}
         >
           <div
-            className="font-semibold leading-tight"
-            style={{ fontSize: "11px", letterSpacing: "0.04em" }}
+            className="font-semibold leading-[1.05]"
+            style={{ fontSize: "13px", letterSpacing: "0.02em" }}
           >
             {tile.name}
           </div>
           {tile.subtitle ? (
             <div
-              className="leading-tight opacity-75"
-              style={{ fontSize: "9px", marginTop: "1px" }}
+              className="leading-[1.05] opacity-80"
+              style={{ fontSize: "11px", marginTop: "2px" }}
             >
               {tile.subtitle}
             </div>
