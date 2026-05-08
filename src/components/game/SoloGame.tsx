@@ -102,15 +102,46 @@ export function SoloGame({ displayName, avatarId, cpuCount }: Props) {
 
       <main className="mx-auto grid max-w-[1600px] gap-6 px-4 py-6 lg:grid-cols-[280px_minmax(0,1fr)_340px] lg:px-6 lg:py-8">
         <aside className="space-y-4">
-          <Card className="border-border/70 bg-card/90 p-4 shadow-soft">
+          <Card className="relative overflow-hidden border-border/70 bg-card/90 p-4 shadow-soft">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full opacity-30 blur-2xl"
+              style={{ background: "var(--gradient-hero)" }}
+            />
             <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Match</div>
-            <div className="mt-2 text-lg font-semibold">Solo vs Computer</div>
-            <div className="mt-1 text-sm text-muted-foreground">
+            <div
+              className="mt-2 font-display text-xl font-bold"
+              style={{
+                background: "linear-gradient(90deg,#3affd9 0%,#ff3aff 100%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+              }}
+            >
+              Solo vs Computer
+            </div>
+            <div
+              className={`mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                state.phase === "ended"
+                  ? "bg-amber-400/15 text-amber-400"
+                  : isMyTurn
+                    ? "bg-primary/15 text-primary animate-pulse"
+                    : "bg-secondary text-muted-foreground"
+              }`}
+            >
+              <span
+                className={`h-1.5 w-1.5 rounded-full ${
+                  state.phase === "ended"
+                    ? "bg-amber-400"
+                    : isMyTurn
+                      ? "bg-primary"
+                      : "bg-muted-foreground"
+                }`}
+              />
               {state.phase === "ended" && winner
                 ? `Winner: ${winner.name}`
                 : isMyTurn
-                  ? "You are up"
-                  : `${currentPlayer?.name ?? "Computer"} is acting`}
+                  ? "Your move"
+                  : `${currentPlayer?.name ?? "Computer"} acting…`}
             </div>
           </Card>
 

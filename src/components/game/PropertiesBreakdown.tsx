@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Building2, Zap } from "lucide-react";
-import type { GameState, Player } from "@/lib/game/engine-types";
-import { AVATARS, PRINCIPLES } from "@/lib/game/constants";
+import type { GameState } from "@/lib/game/engine-types";
+import { AVATARS, GROUP_COLORS, PRINCIPLES } from "@/lib/game/constants";
 
 interface Props {
   state: GameState;
@@ -15,7 +15,6 @@ function getPlayerRent(
   const owner = state.players.find((player) => player.id === ownerId);
   if (!owner) return 0;
 
-  // Check for player-specific rent override
   if (state.rentOverrides?.[principleNo]?.[ownerId] !== undefined) {
     return state.rentOverrides[principleNo][ownerId];
   }
@@ -24,8 +23,7 @@ function getPlayerRent(
   if (!principle) return 0;
 
   const layers = owner.layers[principleNo] ?? 0;
-  
-  // Check if owner owns full group
+
   const ownsFullGroup = PRINCIPLES.filter((p) => p.group === principle.group).every(
     (p) => state.propertyOwners[p.principleNo] === ownerId,
   );
@@ -37,7 +35,6 @@ function getPlayerRent(
 }
 
 export function PropertiesBreakdown({ state }: Props) {
-  // Group properties by owner
   const propertiesByOwner = new Map<string, number[]>();
   for (const [principleNoStr, ownerId] of Object.entries(state.propertyOwners)) {
     const principleNo = Number(principleNoStr);
@@ -50,8 +47,12 @@ export function PropertiesBreakdown({ state }: Props) {
   if (propertiesByOwner.size === 0) {
     return (
       <Card className="border-border/70 bg-card/90 p-4 shadow-soft">
-        <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Properties</div>
-        <div className="mt-3 text-sm text-muted-foreground">No properties owned yet</div>
+        <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
+          <Building2 className="h-3.5 w-3.5" /> Properties
+        </div>
+        <div className="mt-3 rounded-xl border border-dashed border-border/50 bg-secondary/30 p-4 text-center text-sm text-muted-foreground">
+          No tiles claimed yet — answer correctly to buy in!
+        </div>
       </Card>
     );
   }
@@ -67,55 +68,73 @@ export function PropertiesBreakdown({ state }: Props) {
           if (!owner) return null;
 
           const avatar = AVATARS[owner.avatarId % AVATARS.length];
+          const totalRent = principleNos.reduce(
+            (sum, principleNo) => sum + getPlayerRent(state, principleNo, ownerId),
+            0,
+          );
 
           return (
-            <div key={ownerId} className="rounded-lg border border-border/50 bg-secondary/40 p-3">
-              <div className="flex items-center gap-2 mb-2">
-                <div
-                  className="flex h-6 w-6 items-center justify-center rounded-full text-sm text-white"
-                  style={{ background: avatar.color }}
-                >
-                  {avatar.emoji}
+            <div
+              key={ownerId}
+              className="rounded-xl border border-border/50 bg-secondary/40 p-3 transition-all hover:border-primary/40 hover:shadow-soft"
+            >
+              <div className="mb-2 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div
+                    className="flex h-7 w-7 items-center justify-center rounded-full text-base text-white shadow-tile"
+                    style={{
+                      background: `linear-gradient(135deg, ${avatar.color}, ${avatar.color}cc)`,
+                    }}
+                  >
+                    {avatar.emoji}
+                  </div>
+                  <div className="text-sm font-semibold truncate">{owner.name}</div>
                 </div>
-                <div className="text-sm font-medium truncate">{owner.name}</div>
+                <div className="rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-bold text-accent tabular-nums">
+                  ₹{totalRent}
+                </div>
               </div>
 
               <div className="space-y-1.5">
                 {principleNos
-                  .sort()
+                  .sort((a, b) => a - b)
                   .map((principleNo) => {
                     const principle = PRINCIPLES.find((p) => p.principleNo === principleNo);
                     if (!principle) return null;
 
                     const layers = owner.layers[principleNo] ?? 0;
                     const rent = getPlayerRent(state, principleNo, ownerId);
+                    const groupColor = GROUP_COLORS[principle.group];
 
                     return (
-                      <div key={principleNo} className="text-xs rounded bg-background/60 p-2 flex items-center justify-between">
-                        <div className="flex-1 min-w-0">
+                      <div
+                        key={principleNo}
+                        className="group flex items-center gap-2 rounded-lg bg-background/60 p-2 text-xs transition-all hover:translate-x-0.5 hover:bg-background"
+                      >
+                        <span
+                          className="h-7 w-1 shrink-0 rounded-full"
+                          style={{ background: groupColor }}
+                          aria-hidden
+                        />
+                        <div className="min-w-0 flex-1">
                           <div className="font-medium truncate">{principle.name}</div>
-                          <div className="text-muted-foreground flex items-center gap-1 mt-0.5">
+                          <div className="mt-0.5 flex items-center gap-1 text-muted-foreground">
                             {layers > 0 ? (
                               <>
-                                <Zap className="h-3 w-3" />
-                                <span>Layer {layers}</span>
+                                <Zap className="h-3 w-3 text-primary" />
+                                <span className="font-semibold text-primary">L{layers}</span>
                               </>
                             ) : (
-                              <span>Base</span>
+                              <span>Base tile</span>
                             )}
                           </div>
                         </div>
-                        <div className="text-right font-semibold text-accent ml-2">₹{rent}</div>
+                        <div className="ml-1 rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-bold text-accent tabular-nums">
+                          ₹{rent}
+                        </div>
                       </div>
                     );
                   })}
-              </div>
-
-              <div className="mt-2 pt-2 border-t border-border/30 text-xs text-muted-foreground flex justify-between">
-                <span>Total Rent:</span>
-                <span className="font-semibold text-foreground">
-                  ₹{principleNos.reduce((sum, principleNo) => sum + getPlayerRent(state, principleNo, ownerId), 0)}
-                </span>
               </div>
             </div>
           );

@@ -1,4 +1,3 @@
-import { Button } from "@/components/ui/button";
 import { Dices } from "lucide-react";
 
 interface Props {
@@ -10,16 +9,49 @@ interface Props {
   isHumanTurn: boolean;
 }
 
-export function DiceRoller({ disabled, rolling, onRoll }: Props) {
+export function DiceRoller({ disabled, rolling, onRoll, isHumanTurn, currentName }: Props) {
+  const inactive = disabled || rolling;
+
   return (
-    <Button
-      onClick={onRoll}
-      disabled={disabled || rolling}
-      size="lg"
-      className="rounded-full px-8 shadow-[0_0_24px_-4px_rgba(58,255,217,0.6)] transition-transform active:scale-[0.98]"
-    >
-      <Dices className="mr-2 h-4 w-4" />
-      {rolling ? "Rolling…" : "Roll die"}
-    </Button>
+    <div className="flex flex-col items-center gap-2">
+      <button
+        type="button"
+        onClick={onRoll}
+        disabled={inactive}
+        aria-label={rolling ? "Rolling dice" : "Roll the dice"}
+        className={`group relative flex h-24 w-24 items-center justify-center rounded-3xl
+          bg-gradient-to-br from-primary via-primary/90 to-accent
+          text-primary-foreground
+          shadow-[0_10px_30px_-8px_oklch(0.78_0.18_195/0.7),0_0_24px_-4px_oklch(0.72_0.25_320/0.6)]
+          transition-all duration-200
+          enabled:hover:scale-110 enabled:hover:-translate-y-0.5
+          enabled:active:scale-95
+          disabled:cursor-not-allowed disabled:opacity-60
+          ${!inactive && isHumanTurn ? "animate-bounce-soft" : ""}
+        `}
+      >
+        <span className="pointer-events-none absolute inset-0 rounded-3xl bg-white/10 opacity-0 transition-opacity group-enabled:group-hover:opacity-100" />
+        <Dices
+          className={`h-12 w-12 drop-shadow-[0_2px_8px_rgba(0,0,0,0.35)] ${
+            rolling ? "animate-dice-spin" : "group-enabled:group-hover:animate-wiggle"
+          }`}
+          strokeWidth={2.4}
+        />
+        {!inactive && isHumanTurn ? (
+          <span className="pointer-events-none absolute -inset-1 rounded-3xl ring-2 ring-primary/40 animate-pulse-glow" />
+        ) : null}
+      </button>
+      <div
+        className={`px-3 py-1 rounded-full text-[11px] font-semibold uppercase tracking-[0.18em] backdrop-blur ${
+          rolling
+            ? "bg-accent/20 text-accent"
+            : isHumanTurn
+              ? "bg-primary/15 text-primary"
+              : "bg-white/5 text-white/70"
+        }`}
+      >
+        {rolling ? "Rolling…" : isHumanTurn ? "Tap to roll" : `${currentName || "CPU"}'s turn`}
+      </div>
+    </div>
   );
 }
